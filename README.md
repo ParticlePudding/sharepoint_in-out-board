@@ -32,6 +32,8 @@ SharePoint Online のリストをデータの置き場所にして動く、**座
 
 ## まず試す（SharePoint なしで動かす）
 
+**すぐに試す：** [サンプル（GitHub Pages）](https://particlepudding.github.io/in-out-board/?mock=1) をブラウザで開くと、インストールなしで動作を確認できます（架空データで動き、入力は保存されません）。
+
 URL に `?mock=1` を付けて開くと、`js/sample-data.js` の架空データで動きます（SharePoint には接続せず、入力は保存されません）。
 
 ```bash
