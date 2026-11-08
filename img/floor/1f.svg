@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+<title>1F サンプル見取り図</title>
+<rect width="1920" height="1080" fill="#f8fafc"/>
+<rect x="16" y="16" width="1888" height="1048" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="6"/>
+<rect x="60" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="220" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="380" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="540" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="700" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="860" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1020" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1180" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1340" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1500" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1660" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="66" y="76" width="538" height="228" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="70" y="68" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">経営企画部</text>
+<rect x="686" y="76" width="518" height="228" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="690" y="68" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">総務部</text>
+<rect x="1306" y="76" width="518" height="228" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="1310" y="68" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">人事部</text>
+<rect x="66" y="446" width="528" height="228" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="70" y="438" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">経理部</text>
+<rect x="686" y="446" width="314" height="348" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="690" y="438" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">広報部</text>
+<rect x="1306" y="446" width="523" height="243" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="1310" y="438" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">情報システム部</text>
+<rect x="40" y="840" width="380" height="200" rx="6" fill="#e0f2fe" stroke="#94a3b8" stroke-width="3"/>
+<line x1="202.0" y1="840" x2="258.0" y2="840" stroke="#e0f2fe" stroke-width="5"/>
+<text x="230.0" y="948.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#0369a1">エントランス・受付</text>
+<rect x="440" y="840" width="250" height="200" rx="6" fill="#eef2f7" stroke="#94a3b8" stroke-width="3"/>
+<line x1="537.0" y1="840" x2="593.0" y2="840" stroke="#eef2f7" stroke-width="5"/>
+<text x="565.0" y="948.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#64748b">応接室1</text>
+<rect x="710" y="840" width="250" height="200" rx="6" fill="#eef2f7" stroke="#94a3b8" stroke-width="3"/>
+<line x1="807.0" y1="840" x2="863.0" y2="840" stroke="#eef2f7" stroke-width="5"/>
+<text x="835.0" y="948.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#64748b">応接室2</text>
+<rect x="980" y="840" width="360" height="200" rx="6" fill="#eef2f7" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1132.0" y1="840" x2="1188.0" y2="840" stroke="#eef2f7" stroke-width="5"/>
+<text x="1160.0" y="948.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#64748b">会議室A</text>
+<rect x="1360" y="840" width="190" height="200" rx="6" fill="#e5e7eb" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1427.0" y1="840" x2="1483.0" y2="840" stroke="#e5e7eb" stroke-width="5"/>
+<text x="1455.0" y="948.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#6b7280">EV・階段</text>
+<rect x="1570" y="840" width="150" height="200" rx="6" fill="#e5e7eb" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1617.0" y1="840" x2="1673.0" y2="840" stroke="#e5e7eb" stroke-width="5"/>
+<text x="1645.0" y="948.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#6b7280">トイレ</text>
+<rect x="1740" y="840" width="140" height="200" rx="6" fill="#e5e7eb" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1782.0" y1="840" x2="1838.0" y2="840" stroke="#e5e7eb" stroke-width="5"/>
+<text x="1810.0" y="948.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#6b7280">給湯室</text>
+<rect x="1030" y="470" width="240" height="300" rx="6" fill="#eef2f7" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1122.0" y1="770" x2="1178.0" y2="770" stroke="#eef2f7" stroke-width="5"/>
+<text x="1150.0" y="628.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#64748b">複合機・書庫</text>
+<text x="1892" y="1052" text-anchor="end" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="14" fill="#94a3b8">サンプル見取り図（架空のレイアウト）</text>
+</svg>

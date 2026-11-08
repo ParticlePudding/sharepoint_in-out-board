@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>座席表 利用者ガイド</title>
+<style>
+  :root {
+    --navy: #1e3a8a;
+    --text: #1f2937;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --bg-soft: #f8fafc;
+    --accent: #1976d2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+    color: var(--text);
+    background: #fff;
+    line-height: 1.75;
+    font-size: 15px;
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    padding: 28px 16px;
+  }
+  header .inner, main { max-width: 860px; margin: 0 auto; }
+  header h1 { margin: 0 0 4px; font-size: 24px; display: flex; align-items: center; gap: 12px; }
+  header p { margin: 0; opacity: 0.85; }
+  main { padding: 8px 16px 64px; }
+  nav.toc {
+    margin: 20px 0 8px;
+    padding: 14px 18px;
+    background: var(--bg-soft);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  nav.toc ol { margin: 4px 0 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+  nav.toc a { color: var(--accent); text-decoration: none; }
+  h2 {
+    margin: 40px 0 12px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--line);
+    font-size: 20px;
+    scroll-margin-top: 12px;
+  }
+  h3 { margin: 22px 0 6px; font-size: 16px; }
+  p { margin: 8px 0; }
+  ul, ol { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  .ic { width: 1.1em; height: 1.1em; vertical-align: -0.18em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .key {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 1px 8px; border: 1px solid #cbd5e1; border-radius: 6px;
+    background: #fff; font-size: 13px; font-weight: bold; white-space: nowrap;
+  }
+  .dot { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 50%; vertical-align: -0.05em; margin-right: 4px; }
+  .green { background: #22a447; } .blue { background: #1e88e5; } .yellow { background: #f59e0b; }
+  .red { background: #e53935; } .white { background: #fff; box-shadow: inset 0 0 0 1.5px #94a3b8; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--line); padding: 7px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); white-space: nowrap; }
+  .steps { counter-reset: s; list-style: none; padding-left: 0; }
+  .steps > li { counter-increment: s; position: relative; padding-left: 36px; margin: 10px 0; }
+  .steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: 2px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 13px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .note, .tip {
+    margin: 12px 0; padding: 10px 14px; border-radius: 8px; font-size: 14px;
+  }
+  .note { background: #fffbeb; border: 1px solid #fde68a; }
+  .tip  { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .note > b:first-child, .tip > b:first-child { display: block; margin-bottom: 2px; }
+  .draft { background: #fffbeb; border: 2px solid #f59e0b; border-radius: 6px; padding: 0 6px; }
+  dl.faq dt { font-weight: bold; margin-top: 14px; }
+  dl.faq dt::before { content: "Q. "; color: var(--accent); }
+  dl.faq dd { margin: 4px 0 0 0; padding-left: 1.6em; }
+  /* 送信の流れの図（よくある質問） */
+  .flow { display: flex; align-items: stretch; gap: 6px; margin: 12px 0; flex-wrap: wrap; }
+  .flow-box {
+    flex: 1 1 140px; display: flex; flex-direction: column; justify-content: center;
+    padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: var(--bg-soft);
+    text-align: center; font-size: 14px;
+  }
+  .flow-box span { font-size: 12px; color: var(--muted); }
+  .flow-arrow {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+    padding: 0 4px; color: var(--accent); font-size: 12px; font-weight: bold;
+  }
+  .flow-arrow span::after { content: " ▶"; }
+  dl.faq dd p { margin: 6px 0; }
+  @media (max-width: 640px) {
+    .flow { flex-direction: column; }
+    .flow-box { flex: 0 0 auto; padding: 8px 12px; }
+    .flow-arrow span::after { content: " ▼"; }
+  }
+  footer { max-width: 860px; margin: 0 auto; padding: 0 16px 40px; color: var(--muted); font-size: 13px; }
+  @media (max-width: 640px) {
+    nav.toc ol { columns: 1; }
+    header h1 { font-size: 20px; }
+    table { font-size: 13px; }
+  }
+  @media print {
+    header { background: none; color: var(--text); border-bottom: 2px solid var(--text); }
+    a { color: inherit; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>
+      <svg width="34" height="34" viewBox="0 0 512 512" aria-hidden="true">
+        <rect width="512" height="512" rx="112" fill="#ffffff" fill-opacity="0.15"/>
+        <g fill="#ffffff">
+          <rect x="92" y="140" width="96" height="96" rx="20"/><rect x="208" y="140" width="96" height="96" rx="20"/>
+          <rect x="324" y="140" width="96" height="96" rx="20" opacity="0.45"/><rect x="92" y="276" width="96" height="96" rx="20" opacity="0.45"/>
+          <rect x="324" y="276" width="96" height="96" rx="20"/>
+        </g>
+        <rect x="208" y="276" width="96" height="96" rx="20" fill="#34d399"/>
+      </svg>
+      座席表 利用者ガイド
+    </h1>
+    <p>自分の在席状況（ステータス）を入力し、みんなの居場所を確認するためのガイドです。</p>
+  </div>
+</header>
+
+<main>
+  <nav class="toc" aria-label="目次">
+    <b>目次</b>
+    <ol>
+      <li><a href="#overview">画面の見方</a></li>
+      <li><a href="#status">ステータスを変える</a></li>
+      <li><a href="#note">備考を入れる・消す</a></li>
+      <li><a href="#quick">よく使う備考</a></li>
+      <li><a href="#schedule">予定予約（先の日の予定）</a></li>
+      <li><a href="#me">「自分」ボタン</a></li>
+      <li><a href="#seat">席を選ぶ・解除する</a></li>
+      <li><a href="#find">人を探す・絞り込む</a></li>
+      <li><a href="#stats">人数表</a></li>
+      <li><a href="#phone">スマホで使う</a></li>
+      <li><a href="#faq">よくある質問</a></li>
+    </ol>
+  </nav>
+
+  <h2 id="overview">1. 画面の見方</h2>
+  <p>画面の左（スマホでは画面の下）に、画面を切り替えるボタンが並んでいます。</p>
+  <table>
+    <tr><th>ボタン</th><th>できること</th></tr>
+    <tr>
+      <td><span class="key"><svg class="ic" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>座席表</span></td>
+      <td>フロアの見取り図の上に、座席ごとのカードが並びます。カードの色でステータスが分かります。上部のボタン（1F・2F・3F）でフロアを切り替えます。</td>
+    </tr>
+    <tr>
+      <td><span class="key"><svg class="ic" viewBox="0 0 24 24"><path d="M3 5h.01"/><path d="M3 12h.01"/><path d="M3 19h.01"/><path d="M8 5h13"/><path d="M8 12h13"/><path d="M8 19h13"/></svg>リスト</span></td>
+      <td>全員を表（またはカード）で一覧表示します。検索や並び替えができます。</td>
+    </tr>
+    <tr>
+      <td><span class="key"><svg class="ic" viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>人数表</span></td>
+      <td>グループごとに、ステータス別の人数を表示します。</td>
+    </tr>
+    <tr>
+      <td><span class="key"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>自分</span></td>
+      <td>自分のステータス変更画面をすぐ開きます（<a href="#me">6章</a>）。</td>
+    </tr>
+    <tr>
+      <td><span class="key"><svg class="ic" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>更新</span></td>
+      <td>最新の情報を取り直します。画面は1分ごとに自動で更新されるので、普段は押さなくて大丈夫です。</td>
+    </tr>
+  </table>
+
+  <h3>ステータスの色</h3>
+  <table>
+    <tr><th>色</th><th>ステータス</th></tr>
+    <tr><td><span class="dot green"></span>緑</td><td>出勤</td></tr>
+    <tr><td><span class="dot blue"></span>青</td><td>会議・現場</td></tr>
+    <tr><td><span class="dot yellow"></span>オレンジ</td><td>出張・在宅</td></tr>
+    <tr><td><span class="dot red"></span>赤</td><td>退勤・休暇・午前半休・午後半休</td></tr>
+    <tr><td><span class="dot white"></span>白</td><td>未入力</td></tr>
+  </table>
+  <p>座席カードの右上に <svg class="ic" viewBox="0 0 24 24"><path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg> が付いている人は、先の日の予定（予定予約）が入っています。</p>
+
+  <h2 id="status">2. ステータスを変える</h2>
+  <ol class="steps">
+    <li>座席表のカード、またはリストの行を押します（自分なら <span class="key">自分</span> ボタンでもOK）。</li>
+    <li>ステータス画面が開くので、<b>ステータスのボタン</b>（<span class="dot green"></span>出勤、<span class="dot blue"></span>会議 など）を押します。</li>
+    <li>その場で保存され、画面が閉じます。これで完了です。</li>
+  </ol>
+  <div class="tip"><b>画面を閉じるのは、ステータスのボタンだけです</b>
+    備考や予定予約を保存しても、画面は閉じません。続けてステータスを選べます。何も変えずに閉じたいときは右上の × を押します。</div>
+  <div class="tip"><b>通信が遅くても待つ必要はありません</b>
+    押した瞬間に画面に反映され、送信は裏で行われます。送信に時間がかかっているときだけ、画面右下に「送信中…」と出ます。</div>
+
+  <h2 id="note">3. 備考を入れる・消す</h2>
+  <p>ステータス画面の「備考」欄に、行き先などを16文字まで入力できます（例：「第1会議室」「15時戻り」）。</p>
+  <table>
+    <tr><th>やりたいこと</th><th>操作</th></tr>
+    <tr><td>ステータスと備考を一緒に変える</td><td>備考を入力 → <b>ステータスのボタン</b>を押す。両方まとめて保存されます。</td></tr>
+    <tr><td>備考だけ変える</td><td>備考を入力 → <span class="key">備考を保存</span>（または Enter）→ × で閉じる</td></tr>
+    <tr><td>備考を消す</td><td><span class="key">削除</span> を押す（1回で消えて保存されます）</td></tr>
+    <tr><td>備考を消して出勤に戻す</td><td><span class="key">削除</span> → <span class="dot green"></span><b>出勤</b></td></tr>
+  </table>
+  <p>入力しただけで保存していない間は、備考欄が <span class="draft">このように</span> オレンジ色になり、「未保存・ステータスを押すと一緒に保存」と表示されます。</p>
+  <div class="note"><b>順番に注意</b>
+    ステータスのボタンを押すと画面が閉じるので、<b>備考を先に</b>入れてからステータスを押してください。</div>
+
+  <h2 id="quick">4. よく使う備考</h2>
+  <ul>
+    <li>備考欄の下に並んでいるボタン（定型文）を押すと、その文が備考欄に入ります。そのあとステータスか <span class="key">備考を保存</span> を押すと保存されます。</li>
+    <li><b>登録</b>：備考欄に文字を入れて <span class="key">＋ 現在の入力を登録</span>。1人20件まで。</li>
+    <li><b>削除</b>：<span class="key">選択して削除</span> → 消したいものを押して選ぶ → <span class="key">選択したn件を削除</span>。</li>
+    <li>よく使う備考は人ごとに別々です。</li>
+  </ul>
+
+  <h2 id="schedule">5. 予定予約（先の日の予定）</h2>
+  <p>休暇や出張など、<b>明日以降</b>の予定を1件だけ予約できます。当日になると、自動でステータスと備考に反映されます。</p>
+  <ol class="steps">
+    <li>ステータス画面の下の「予定予約」で、日付・ステータス・備考を選びます。</li>
+    <li><span class="key">予約を保存</span> を押します（またはそのままステータスのボタンを押すと、一緒に保存されます）。</li>
+    <li>「予約中: 2026/11/10 → <span class="dot red"></span>休暇」のように表示されれば完了です。</li>
+  </ol>
+  <ul>
+    <li>取り消すときは <span class="key">予約取消</span> を押します。</li>
+    <li>予約を変えて保存していない欄は、オレンジ色になります。</li>
+    <li>当日の反映は、会社のサイネージ（表示用PC）が行います。朝の起動時と15分ごとに反映されます。</li>
+  </ul>
+
+  <h2 id="me">6. 「自分」ボタン</h2>
+  <p>毎回自分の席を探さなくても、<span class="key">自分</span> ボタンで自分のステータス画面がすぐ開きます。</p>
+  <ol class="steps">
+    <li>初めて押したときに「自分を選択」画面が出るので、名前を検索して選びます。</li>
+    <li>以後は <span class="key">自分</span> を押すだけで開きます。</li>
+  </ol>
+  <ul>
+    <li>設定は<b>この端末（このブラウザ）にだけ</b>保存されます。PCとスマホで使う場合は、それぞれで1回設定してください。</li>
+    <li>変更・解除は、ステータス画面の上の <span class="key">自分に設定</span>／<span class="key">自分（解除する）</span> から行えます。</li>
+  </ul>
+  <div class="tip"><b>ブックマークで直接開く</b>
+    ステータス画面の <span class="key">直行URLをコピー</span> で、その人のステータス画面を直接開くURLをコピーできます。ブックマークやスマホのホーム画面に登録すると便利です。</div>
+
+  <h2 id="seat">7. 席を選ぶ・解除する（フリーアドレス）</h2>
+  <p>座る席が日によって変わる職場では、座席表の<b>空席</b>から自分の席を選べます。</p>
+  <ol class="steps">
+    <li>座席表で、点線の枠の <b>(空席)</b> を押します。</li>
+    <li>「席を割り当て」画面が出るので、座る人を選びます。「自分」を設定していれば、一番上に出ます。</li>
+    <li>その人のステータス画面が開くので、そのまま <span class="dot green"></span>出勤 などを押します。</li>
+  </ol>
+  <ul>
+    <li>すでに席がある人を選ぶと、<b>前の席から移動する</b>か、<b>席を追加する</b>（2席以上を持つ）かを選べます。</li>
+    <li>席を空けるときは、ステータス画面の上の <span class="key"><svg class="ic" viewBox="0 0 24 24"><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>席の割り当て解除</span>（スマホではアイコンだけ）を押します。座席表ではその席が空席に戻ります。席が2つ以上ある人は、解除する席（または「すべて解除する」）を選べます。</li>
+    <li>席の変更は、他の人の画面にも1分以内に反映されます。</li>
+    <li>固定席の職場では、管理者の設定でこの機能が使えない場合があります（空席を押しても何も起きません）。</li>
+  </ul>
+
+  <h2 id="find">8. 人を探す・絞り込む</h2>
+  <ul>
+    <li><b>検索</b>：リスト画面やサイドリストの検索欄に、名前・部署・席番号・備考の一部を入れます。</li>
+    <li><b>フロア</b>：<span class="key">フロア: すべて ▾</span> で、表示するフロアを選べます。</li>
+    <li><b>状態</b>：<span class="key">状態: すべて ▾</span> で、表示するステータスを選べます（例：休暇の人だけ）。</li>
+    <li><b>並び替え</b>：表の見出し（No.・名前・状態など）を押すと並び替わります。もう一度押すと逆順です。</li>
+    <li><b>リスト／カード</b>：表で見るか、カードで見るかを切り替えます。</li>
+    <li><b>席の場所を見る</b>：<span class="key"><svg class="ic" viewBox="0 0 24 24"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>1F-A01</span> のような席番号ボタンを押すと、座席表のその席に移動して光ります。</li>
+    <li><b>サイドリスト</b>（PC）：座席表の右上 <span class="key">サイドリスト表示</span> で、座席表を見ながら一覧も表示できます。</li>
+    <li><b>列幅調整</b>（リスト）：<span class="key">列幅調整</span> を押すと、見出しの右端をドラッグして列の幅を変えられます。</li>
+  </ul>
+  <p>途中で切れている文字は、マウスを乗せると全文が表示されます（PC）。検索・絞り込み・並び順・列幅は端末ごとに記憶されます。</p>
+
+  <h2 id="stats">9. 人数表</h2>
+  <ul>
+    <li>グループごとに、ステータス別の人数を表示します。</li>
+    <li><b>グループ名を押す</b>と、メンバーの一覧（No.・名前・状態・備考）が開きます。見出しを押すと並び替えできます。</li>
+    <li>グループの作成・編集は <span class="key">グループ設定</span> から行います（変更は全員の画面に反映されます）。</li>
+  </ul>
+
+  <h2 id="phone">10. スマホで使う</h2>
+  <ul>
+    <li>画面を切り替えるボタンは、画面の下に並びます。</li>
+    <li>座席表は指で拡大・縮小、ドラッグで移動できます。カードを軽くタップするとステータス画面が開きます。</li>
+    <li>入力後に「完了」（Enter）を押すとキーボードが閉じます。</li>
+    <li>一括ステータス変更とサイドリストはPC専用です。</li>
+    <li>ブラウザのメニューから「ホーム画面に追加」すると、アイコンから開けるようになります。</li>
+  </ul>
+
+  <h2 id="faq">11. よくある質問</h2>
+  <dl class="faq">
+    <dt>保存したのに、他の人の画面に反映されません。</dt>
+    <dd>
+      <p>故障ではありません。他の人の画面に出るまでに、<b>最大で1分ちょっと</b>かかることがあります。</p>
+      <p>あなたの入力が他の人の画面に出るまでには、次の2つの段階があります。</p>
+      <div class="flow">
+        <div class="flow-box"><b>あなたの画面</b><span>入力する</span></div>
+        <div class="flow-arrow"><span>① 送る</span></div>
+        <div class="flow-box"><b>SharePoint</b><span>みんなの情報の置き場所</span></div>
+        <div class="flow-arrow"><span>② 取りに行く</span></div>
+        <div class="flow-box"><b>他の人の画面</b><span>表示が変わる</span></div>
+      </div>
+      <table>
+        <tr><th>段階</th><th>いつ行われるか</th></tr>
+        <tr>
+          <td>① あなたの画面から SharePoint へ送る</td>
+          <td>
+            <b>ステータス画面を閉じたとき</b>にまとめて送ります。ステータスのボタンを押すと画面が閉じるので、すぐ送られます。<br>
+            備考だけ保存して画面を開いたままにしていると、閉じるまで送られません（開いたままでも20秒たつと送られます）。
+          </td>
+        </tr>
+        <tr>
+          <td>② 他の人の画面が SharePoint に取りに行く</td>
+          <td>
+            <b>1分に1回</b>、自動で取りに行きます。そのため、①のあと最大1分待つことになります。<br>
+            相手がステータス画面や設定画面を開いている間や、ブラウザで別のタブを見ている間は、取りに行くのをお休みします。画面を閉じたり、タブに戻ったりすると再開します。
+          </td>
+        </tr>
+      </table>
+      <p><b>すぐに反映させたいとき</b></p>
+      <ol>
+        <li>あなたのステータス画面が閉じていることを確認します（開いていたら × で閉じる）。</li>
+        <li>相手に <span class="key">更新</span> ボタンを押してもらいます。すぐに最新の情報が表示されます。</li>
+      </ol>
+      <p><b>1分以上たっても反映されないとき</b></p>
+      <ul>
+        <li>あなたの画面に赤い「保存できませんでした」が出ていないか確認してください。出ていたら送信に失敗しています。もう一度入力してください。</li>
+        <li>画面右下に「送信中…」が出たままの場合は、通信がつながりにくくなっています。電波の良い場所で、少し待ってください。</li>
+        <li>自分の画面で <span class="key">更新</span> を押して、入力した内容が残っていれば、SharePoint には保存できています。</li>
+      </ul>
+    </dd>
+    <dt>「保存できませんでした」と赤い表示が出ました。</dt>
+    <dd>通信が切れていた可能性があります。自動で2回送り直しても失敗したときに表示されます。画面は保存前の状態に戻っているので、通信状況を確認してもう一度入力してください。</dd>
+    <dt>画面の上に赤い帯（通信エラー）が出ています。</dt>
+    <dd>最新の情報を取得できていません。表示が古い可能性があります。ネットワークを確認し、<span class="key">更新</span> を押すかページを再読み込みしてください。</dd>
+    <dt>入力中に × を押したら確認が出ました。</dt>
+    <dd>備考や予定予約に、保存していない入力があります。保存せずに閉じてよければ「OK」を押してください。</dd>
+    <dt>予定予約が当日に反映されませんでした。</dt>
+    <dd>当日の反映はサイネージ（表示用PC）が行います。サイネージが動いていない日は反映されないので、管理者に連絡してください。</dd>
+    <dt>他の人のステータスも変えられますか？</dt>
+    <dd>できます（不在の人の代わりに入力するため）。他の人の情報を変えるときは、本人に一声かけてください。</dd>
+  </dl>
+</main>
+<footer>
+  画面内のアイコンは Lucide（ISC License）を使用しています。ライセンス表記はアプリの THIRD_PARTY_NOTICES.txt を参照してください。
+</footer>
+</body>
+</html>
