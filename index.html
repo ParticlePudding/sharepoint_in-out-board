@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>フロアマップ座席表</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- アプリのアイコン（ブラウザのタブ・スマホのホーム画面）。同じフォルダに置くだけで外部への通信はありません -->
+  <link rel="icon" href="img/icon/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="img/icon/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="img/icon/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="img/icon/apple-touch-icon.png">
+  <meta name="theme-color" content="#1e3a8a">
+</head>
+<body>
+  <!-- 保存完了などの短い通知 -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <!-- 裏で保存している間（少し長引いた時だけ）表示。save-queue.js -->
+  <div id="syncIndicator" class="sync-indicator" role="status" hidden>送信中…</div>
+
+  <!-- 通信エラー時だけ表示（古い在席情報に気付けるように） -->
+  <div id="staleBanner" class="stale-banner" role="alert" hidden></div>
+
+  <!-- 左サイドバー -->
+  <aside class="sidebar" aria-label="メインナビゲーション">
+    <div class="sidebar-group">
+      <button type="button" class="nav-btn active" id="navMapBtn" title="座席表表示">
+        <span class="nav-icon"><i class="ic" data-icon="map"></i></span>
+        <span class="nav-label">座席表</span>
+      </button>
+      <button type="button" class="nav-btn" id="navListBtn" title="リスト表示">
+        <span class="nav-icon"><i class="ic" data-icon="list"></i></span>
+        <span class="nav-label">リスト</span>
+      </button>
+      <button type="button" class="nav-btn" id="navStatsBtn" title="ステータス人数表">
+        <span class="nav-icon"><i class="ic" data-icon="chart"></i></span>
+        <span class="nav-label">人数表</span>
+      </button>
+      <button type="button" class="nav-btn nav-me-btn" id="navMeBtn" title="自分のステータスを変更">
+        <span class="nav-icon"><i class="ic" data-icon="me"></i></span>
+        <span class="nav-label">自分</span>
+      </button>
+    </div>
+    <div class="sidebar-group">
+      <button type="button" class="nav-btn" id="settingsBtn" title="設定">
+        <span class="nav-icon"><i class="ic" data-icon="settings"></i></span>
+        <span class="nav-label">設定</span>
+      </button>
+      <button type="button" class="nav-btn" id="refreshBtn" data-tooltip="最終更新: 未取得" title="クリックで全データを再取得">
+        <span class="nav-icon"><i class="ic" data-icon="refresh"></i></span>
+        <span class="nav-label">更新</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- 右メインエリア -->
+  <div class="main-area">
+    <header class="header-row is-map">
+      <div class="header-left">
+        <h2 id="viewTitle"><i class="ic" data-icon="map"></i><span class="ic-text">フロアマップ座席表</span></h2>
+        <div id="floorSwitch" class="floor-switch" role="group" aria-label="フロア切替"></div>
+      </div>
+      <div class="header-right" id="mapHeaderActions">
+        <button id="bulkModeBtn" type="button"><i class="ic" data-icon="bulk"></i><span class="ic-text">一括ステータス変更</span></button>
+        <button id="toggleSideListBtn" type="button"><i class="ic" data-icon="sidepanel"></i><span class="ic-text">サイドリスト表示</span></button>
+      </div>
+    </header>
+
+    <!-- 一括ステータス・備考変更バー（座席表表示時のみ） -->
+    <div id="bulkActionBar" class="bulk-action-bar">
+      <div class="bulk-row">
+        <div class="bulk-action-left"><span id="bulkSelectionCount">対象者を選択してください</span></div>
+        <div class="bulk-status-group" role="group" aria-label="一括変更先ステータス" id="bulkStatusGroup">
+          <span class="bulk-status-label">ステータス:</span>
+          <!-- ボタンは app.js が CONFIG.STATUS_VIEW から生成 -->
+        </div>
+      </div>
+      <div class="bulk-row">
+        <div class="bulk-note-group">
+          <label class="bulk-note-check">
+            <input type="checkbox" id="bulkNoteCheck">
+            <span>備考も変更する:</span>
+          </label>
+          <input type="text" id="bulkNoteInput" class="bulk-note-input" maxlength="16" placeholder="備考を入力 (空欄でクリア)" disabled>
+        </div>
+        <div class="bulk-exec-group">
+          <button type="button" class="btn-primary" id="bulkExecuteBtn">実行</button>
+          <button type="button" id="bulkCancelBtn">キャンセル</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ① 座席表ビュー（マップ＋サイドリスト） -->
+    <div class="map-stage" id="mapStage">
+      <div class="map-viewport" id="viewport">
+        <div id="floorMap" class="floor-map-container"></div>
+        <button type="button" id="zoomFit" class="fit-btn" hidden>全体に戻す</button>
+      </div>
+
+      <!-- サイネージ・併用向け サイドリストパネル -->
+      <aside id="mapSideList" class="map-side-list" aria-label="サイドリスト">
+        <div class="map-side-list-header">
+          <div class="map-side-list-top-row">
+            <div class="side-view-switch" role="group" aria-label="表示形式切替">
+              <button type="button" id="sideViewListBtn" class="active" title="リスト形式で表示"><i class="ic" data-icon="list"></i><span class="ic-text">リスト</span></button>
+              <button type="button" id="sideViewCardBtn" title="カード形式で一覧表示"><i class="ic" data-icon="card"></i><span class="ic-text">カード</span></button>
+            </div>
+            <!-- 検索は最上段の右（左は「リスト／カード」） -->
+            <div class="search-box-wrap side-search-wrap">
+              <span class="search-icon" aria-hidden="true"><i class="ic" data-icon="search"></i></span>
+              <input type="search" id="sideListSearch" enterkeyhint="search" class="side-list-search" placeholder="No.・名前・部署・備考で検索">
+            </div>
+          </div>
+
+          <!-- 絞り込み（フロア・状態） -->
+          <div class="map-side-list-filter-row">
+            <button type="button" id="sideListFloorBtn" class="status-filter-btn status-filter-btn-sm floor-filter-btn" aria-expanded="false" aria-controls="sideListSettingsPanel" title="表示するフロアの設定">フロア: すべて</button>
+            <button type="button" id="sideListStatusFilterBtn" class="status-filter-btn status-filter-btn-sm" aria-expanded="false" aria-controls="sideListStatusFilterPanel">状態: すべて</button>
+          </div>
+          <!-- 表示するフロアの選択（リスト画面の「フロア」と同じ見た目。設定は別々に保存）。中身は view-map.js が生成 -->
+          <div id="sideListSettingsPanel" class="status-filter-panel status-filter-panel-sm" hidden>
+            <div class="status-filter-actions">
+              <span class="status-filter-title">表示するフロア</span>
+              <button type="button" id="sideFloorsAllBtn" class="btn-xs">すべて</button>
+              <button type="button" id="sideFloorsNoneBtn" class="btn-xs">すべて解除</button>
+              <button type="button" id="sideListSettingsCloseBtn" class="btn-xs status-filter-close">閉じる</button>
+            </div>
+            <div id="sideListFloorCheckboxes" class="status-filter-checks"></div>
+          </div>
+          <!-- 状態の絞り込み（チェックボックス・複数選択）。中身は app.js が生成 -->
+          <div id="sideListStatusFilterPanel" class="status-filter-panel status-filter-panel-sm" hidden></div>
+
+          <!-- カード表示時用の並び替えバー -->
+          <div id="sideCardSortBar" class="side-card-sort-bar" hidden>
+            <span class="side-card-sort-label">並び順:</span>
+            <button type="button" class="side-sort-chip" data-side-sort="SortNo">No.<span class="sort-indicator">▲</span></button>
+            <button type="button" class="side-sort-chip" data-side-sort="Title">名前<span class="sort-indicator">⇅</span></button>
+            <button type="button" class="side-sort-chip" data-side-sort="Status">状態<span class="sort-indicator">⇅</span></button>
+            <button type="button" class="side-sort-chip" data-side-sort="Remarks">備考<span class="sort-indicator">⇅</span></button>
+          </div>
+        </div>
+
+        <div class="map-side-list-body">
+          <!-- リストタイプ表示 -->
+          <table id="sideListTable" class="side-list-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-side-sort="SortNo" aria-sort="ascending" style="width:52px;">No.<span class="sort-indicator">▲</span></th>
+                <th class="sortable" data-side-sort="Title" aria-sort="none">名前<span class="sort-indicator">⇅</span></th>
+                <th class="sortable" data-side-sort="Status" aria-sort="none" style="width:86px;">状態<span class="sort-indicator">⇅</span></th>
+                <th class="sortable" data-side-sort="Remarks" aria-sort="none">備考<span class="sort-indicator">⇅</span></th>
+              </tr>
+            </thead>
+            <tbody id="mapSideListBody"></tbody>
+          </table>
+
+          <!-- カードタイプ表示（フロア別グループ分け・横3列） -->
+          <div id="mapSideCardContainer" class="side-card-container" hidden></div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ② リスト表示ビュー -->
+    <section class="list-viewport" id="listViewport" aria-label="社員リスト">
+      <div class="list-toolbar">
+        <div class="side-view-switch list-view-switch" role="group" aria-label="表示形式切替">
+          <button type="button" id="listViewTableBtn" class="active" title="リスト形式で表示"><i class="ic" data-icon="list"></i><span class="ic-text">リスト</span></button>
+          <button type="button" id="listViewCardBtn" title="カード形式で一覧表示"><i class="ic" data-icon="card"></i><span class="ic-text">カード</span></button>
+        </div>
+        <div class="search-box-wrap list-search-wrap">
+          <span class="search-icon" aria-hidden="true"><i class="ic" data-icon="search"></i></span>
+          <input type="search" id="employeeSearch" class="list-search" placeholder="名前・部署・席番号・備考で検索" enterkeyhint="search">
+        </div>
+        <div class="list-toolbar-right">
+          <button type="button" id="listFloorFilterBtn" class="status-filter-btn floor-filter-btn" aria-expanded="false" aria-controls="listFloorFilterPanel" title="表示するフロアの設定">フロア: すべて</button>
+          <button type="button" id="listStatusFilterBtn" class="status-filter-btn" aria-expanded="false" aria-controls="listStatusFilterPanel">状態: すべて</button>
+          <button type="button" id="colAdjustBtn" class="col-adjust-btn" title="列見出しの右端をドラッグして列幅を調整します（タッチ操作向け）"><i class="ic" data-icon="width"></i><span class="ic-text">列幅調整</span></button>
+        </div>
+      </div>
+
+      <!-- 状態の絞り込み（チェックボックス・複数選択）。中身は app.js が生成 -->
+      <div id="listStatusFilterPanel" class="status-filter-panel" hidden></div>
+
+      <!-- 表示するフロアの選択（サイドリストの「設定」と同じ。設定は別々に保存）。中身は view-list.js が生成 -->
+      <div id="listFloorFilterPanel" class="status-filter-panel" hidden>
+        <div class="status-filter-actions">
+          <span class="status-filter-title">表示するフロア</span>
+          <button type="button" class="btn-xs" id="listFloorsAllBtn">すべて</button>
+          <button type="button" class="btn-xs" id="listFloorsNoneBtn">すべて解除</button>
+          <button type="button" class="btn-xs status-filter-close" id="listFloorsCloseBtn">閉じる</button>
+        </div>
+        <div id="listFloorCheckboxes" class="status-filter-checks"></div>
+      </div>
+
+      <!-- 列幅調整モード中の案内バー -->
+      <div id="colAdjustBar" class="col-adjust-bar" hidden>
+        <span>列見出しの右端（オレンジの線）をドラッグして幅を調整できます。</span>
+        <div class="col-adjust-bar-btns">
+          <button type="button" id="colAdjustResetBtn" class="btn-sm">初期の幅に戻す</button>
+          <button type="button" id="colAdjustDoneBtn" class="btn-sm btn-primary">完了</button>
+        </div>
+      </div>
+
+      <!-- カード表示時用の並び替えバー -->
+      <div id="listCardSortBar" class="side-card-sort-bar list-card-sort-bar" hidden>
+        <span class="side-card-sort-label">並び順:</span>
+        <button type="button" class="side-sort-chip" data-list-sort="SortNo">No.<span class="sort-indicator">▲</span></button>
+        <button type="button" class="side-sort-chip" data-list-sort="Title">名前<span class="sort-indicator">⇅</span></button>
+        <button type="button" class="side-sort-chip" data-list-sort="Dept">部署<span class="sort-indicator">⇅</span></button>
+        <button type="button" class="side-sort-chip" data-list-sort="Status">状態<span class="sort-indicator">⇅</span></button>
+        <button type="button" class="side-sort-chip" data-list-sort="Remarks">備考<span class="sort-indicator">⇅</span></button>
+      </div>
+
+      <div class="list-table-wrap" id="listTableWrap">
+        <table class="employee-table" id="employeeTable">
+          <colgroup>
+            <col data-col="SortNo" style="width:70px;">
+            <col data-col="Title" style="width:190px;">
+            <col data-col="Status" style="width:110px;">
+            <col data-col="Remarks" style="width:200px;">
+            <col data-col="NextSchedule" style="width:180px;">
+            <col data-col="Seat" style="width:150px;">
+          </colgroup>
+          <thead>
+            <tr>
+              <th class="sortable" data-sort="SortNo" data-col="SortNo" aria-sort="ascending"><span class="th-label">No.<span class="sort-indicator">▲</span></span><span class="col-resizer"></span></th>
+              <th class="multi-sort" data-col="Title"><span class="th-label"><button type="button" class="th-sort-btn" data-sort="Title">名前<span class="sort-indicator">⇅</span></button><span class="th-sep">/</span><button type="button" class="th-sort-btn" data-sort="Dept">部署<span class="sort-indicator">⇅</span></button></span><span class="col-resizer"></span></th>
+              <th class="sortable" data-sort="Status" data-col="Status" aria-sort="none"><span class="th-label">状態<span class="sort-indicator">⇅</span></span><span class="col-resizer"></span></th>
+              <th class="sortable" data-sort="Remarks" data-col="Remarks" aria-sort="none"><span class="th-label">備考<span class="sort-indicator">⇅</span></span><span class="col-resizer"></span></th>
+              <th class="sortable" data-sort="NextSchedule" data-col="NextSchedule" aria-sort="none"><span class="th-label">次回予約<span class="sort-indicator">⇅</span></span><span class="col-resizer"></span></th>
+              <th class="sortable" data-sort="Seat" data-col="Seat" aria-sort="none"><span class="th-label">席番号<span class="sort-indicator">⇅</span></span><span class="col-resizer"></span></th>
+            </tr>
+          </thead>
+          <tbody id="employeeTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- カードタイプ表示（フロア別グループ分け・画面幅に合わせて最大8列） -->
+      <div id="listCardContainer" class="side-card-container list-card-container" hidden></div>
+    </section>
+
+    <!-- ③ ステータス人数表ビュー -->
+    <section class="stats-viewport" id="statsViewport" aria-label="ステータス人数表">
+      <div class="stats-controls">
+        <button type="button" id="openStatsGroupModalBtn" class="btn-success"><i class="ic" data-icon="settings"></i><span class="ic-text">グループ設定</span></button>
+      </div>
+
+      <div class="list-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>グループ</th>
+              <th><span class="status-dot dot-green" aria-hidden="true"></span>出勤</th>
+              <th><span class="status-dot dot-blue" aria-hidden="true"></span>会議</th>
+              <th><span class="status-dot dot-blue" aria-hidden="true"></span>現場</th>
+              <th><span class="status-dot dot-yellow" aria-hidden="true"></span>出張</th>
+              <th><span class="status-dot dot-yellow" aria-hidden="true"></span>在宅</th>
+              <th><span class="status-dot dot-red" aria-hidden="true"></span>退勤</th>
+              <th><span class="status-dot dot-red" aria-hidden="true"></span>休暇</th>
+              <th><span class="status-dot dot-red" aria-hidden="true"></span>午前半休</th>
+              <th><span class="status-dot dot-red" aria-hidden="true"></span>午後半休</th>
+              <th><span class="status-dot dot-white" aria-hidden="true"></span>未入力</th>
+              <th>合計</th>
+            </tr>
+          </thead>
+          <tbody id="statsTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- 人数表グループ設定モーダル -->
+  <div id="statsGroupModal" class="modal-overlay">
+    <div class="modal-content stats-group-modal-content" role="dialog" aria-modal="true" aria-labelledby="statsGroupModalTitle">
+      <div class="modal-header">
+        <h3 id="statsGroupModalTitle"><i class="ic" data-icon="chart"></i><span class="ic-text">グループ設定</span></h3>
+        <button type="button" class="close-btn" id="statsGroupModalClose" aria-label="閉じる"><i class="ic" data-icon="close"></i></button>
+      </div>
+
+      <div class="stats-group-layout">
+        <!-- 左ペイン: グループ一覧と新規作成 -->
+        <div class="stats-group-left">
+          <div class="stats-group-add-row">
+            <input type="text" id="newStatsGroupName" placeholder="新しいグループ名を入力" maxlength="32">
+            <button type="button" class="btn-primary" id="addStatsGroupBtn">＋ 作成</button>
+          </div>
+          <div class="stats-group-list-label">登録済みグループ一覧</div>
+          <div id="statsGroupList" class="stats-group-list"></div>
+        </div>
+
+        <!-- 右ペイン: 選択中グループのメンバー検索・登録 -->
+        <div class="stats-group-right" id="statsGroupEditorPane">
+          <div class="stats-group-editor-header">
+            <div class="stats-group-rename-row">
+              <label for="editStatsGroupName"><b>グループ名:</b></label>
+              <input type="text" id="editStatsGroupName" maxlength="32" placeholder="グループを選択してください" disabled>
+            </div>
+            <div class="stats-group-member-count" id="statsGroupMemberCount"></div>
+          </div>
+
+          <div class="stats-group-search-row">
+            <div class="search-box-wrap search-box-full">
+              <span class="search-icon" aria-hidden="true"><i class="ic" data-icon="search"></i></span>
+              <input type="search" id="statsGroupMemberSearch" enterkeyhint="search" class="list-search" placeholder="名前・部署・席番号で人員を検索" disabled>
+            </div>
+            <div class="stats-group-bulk-btns">
+              <button type="button" class="btn-sm" id="statsGroupCheckFilteredBtn" disabled>検索結果をすべて選択</button>
+              <button type="button" class="btn-sm" id="statsGroupUncheckFilteredBtn" disabled>検索結果をすべて解除</button>
+            </div>
+          </div>
+
+          <div id="statsGroupMemberList" class="stats-group-member-list"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer stats-group-footer">
+        <span id="statsGroupSaveStatus" class="stats-group-save-status"></span>
+        <div class="stats-group-footer-btns">
+          <button type="button" class="btn-primary" id="saveStatsGroupsBtn"><i class="ic" data-icon="save"></i><span class="ic-text">変更を保存（全ユーザーに反映）</span></button>
+          <button type="button" id="statsGroupDoneBtn">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 「自分」の選択（この端末で初めて「自分」ボタンを押した時） -->
+  <div id="mePickerModal" class="modal-overlay">
+    <div class="modal-content me-picker-modal-content" role="dialog" aria-modal="true" aria-labelledby="mePickerTitle">
+      <div class="modal-header">
+        <h3 id="mePickerTitle"><i class="ic" data-icon="me"></i><span class="ic-text">自分を選択</span></h3>
+        <button type="button" class="close-btn" id="mePickerClose" aria-label="閉じる"><i class="ic" data-icon="close"></i></button>
+      </div>
+      <p class="me-picker-help" id="mePickerHelp">あなたの名前を選んでください。次回からは「自分」ボタンを押すだけで、自分のステータス変更画面が開きます。<br>※この端末（ブラウザ）だけに保存されます。</p>
+      <div class="search-box-wrap search-box-full me-picker-search">
+        <span class="search-icon" aria-hidden="true"><i class="ic" data-icon="search"></i></span>
+        <input type="search" id="mePickerSearch" class="list-search" placeholder="名前・部署・No.で検索" enterkeyhint="search" autocomplete="off">
+      </div>
+      <div id="mePickerList" class="me-picker-list" role="listbox" aria-label="メンバー一覧"></div>
+    </div>
+  </div>
+
+  <!-- 席の割り当て（座席表の空席を押した時。seat-assign.js） -->
+  <div id="seatAssignModal" class="modal-overlay">
+    <div class="modal-content me-picker-modal-content" role="dialog" aria-modal="true" aria-labelledby="seatAssignTitle">
+      <div class="modal-header">
+        <h3 id="seatAssignTitle"><i class="ic" data-icon="pin"></i><span class="ic-text" id="seatAssignTitleText">席を割り当て</span></h3>
+        <button type="button" class="close-btn" id="seatAssignClose" aria-label="閉じる"><i class="ic" data-icon="close"></i></button>
+      </div>
+      <p class="me-picker-help">この席に座る人を選んでください。すでに席がある人は、その席から移動します。</p>
+      <div class="search-box-wrap search-box-full me-picker-search">
+        <span class="search-icon" aria-hidden="true"><i class="ic" data-icon="search"></i></span>
+        <input type="search" id="seatAssignSearch" class="list-search" placeholder="名前・部署・No.・席番号で検索" enterkeyhint="search" autocomplete="off">
+      </div>
+      <div id="seatAssignList" class="me-picker-list" role="listbox" aria-label="メンバー一覧"></div>
+    </div>
+  </div>
+
+  <!-- 人数表：グループのメンバー一覧（グループ名をタップで表示） -->
+  <div id="groupMembersModal" class="modal-overlay">
+    <div class="modal-content group-members-modal-content" role="dialog" aria-modal="true" aria-labelledby="groupMembersTitle">
+      <div class="modal-header">
+        <h3 id="groupMembersTitle"><i class="ic" data-icon="group"></i><span class="ic-text">グループメンバー</span></h3>
+        <button type="button" class="close-btn" id="groupMembersClose" aria-label="閉じる"><i class="ic" data-icon="close"></i></button>
+      </div>
+      <div id="groupMembersSummary" class="group-members-summary"></div>
+      <div id="groupMembersList" class="group-members-list"></div>
+    </div>
+  </div>
+
+  <!-- 設定モーダル -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-content settings-modal-content" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-header">
+        <h3 id="settingsTitle"><i class="ic" data-icon="settings"></i><span class="ic-text">座席表・社員データ設定</span></h3>
+        <button type="button" class="close-btn" id="settingsClose" aria-label="閉じる"><i class="ic" data-icon="close"></i></button>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-header">
+          <h4>＋ 新規メンバー・座席の登録</h4>
+        </div>
+        <div class="settings-form-grid">
+          <input type="number" id="newSortNo" placeholder="No." step="1">
+          <input type="text" id="newSeat" placeholder="席番号 (例: A-1)">
+          <input type="text" id="newName" placeholder="名前">
+          <input type="text" id="newDept" placeholder="部署">
+          <button type="button" class="btn-primary" id="addMemberBtn">登録</button>
+        </div>
+      </div>
+      <div class="settings-section">
+        <div class="settings-section-header">
+          <h4><i class="ic" data-icon="list"></i><span class="ic-text">既存メンバーの編集・管理</span></h4>
+          <div class="search-box-wrap settings-search-wrap">
+            <span class="search-icon" aria-hidden="true"><i class="ic" data-icon="search"></i></span>
+            <input type="search" id="settingsSearch" enterkeyhint="search" class="settings-search" placeholder="No.・席番号・名前・部署でフィルタ">
+          </div>
+        </div>
+        <div class="list-summary" id="settingsSummary"></div>
+        <div class="settings-table-wrap">
+          <table class="settings-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-settings-sort="SortNo" aria-sort="ascending" style="width:80px;">No.<span class="sort-indicator">▲</span></th>
+                <th class="sortable" data-settings-sort="Seat" aria-sort="none" style="width:115px;">席番号<span class="sort-indicator">⇅</span></th>
+                <th class="sortable" data-settings-sort="Title" aria-sort="none">名前<span class="sort-indicator">⇅</span></th>
+                <th class="sortable" data-settings-sort="Dept" aria-sort="none">部署<span class="sort-indicator">⇅</span></th>
+                <th style="width:116px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="settingsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" id="settingsDoneBtn">閉じる</button></div>
+    </div>
+  </div>
+
+  <!-- 個別ステータス・備考・1件予約モーダル -->
+  <div id="statusModal" class="modal-overlay">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div>
+          <div class="modal-seat">
+            <span id="modalSeat" class="modal-seat-links"></span>
+            <button type="button" class="copy-link-btn" id="unassignSeatBtn" title="この人の席の割り当てを解除します（座席表では空席になります）" aria-label="席の割り当て解除" hidden><i class="ic" data-icon="logout"></i><span class="label-long">席の割り当て解除</span></button>
+            <button type="button" class="copy-link-btn" id="copyDirectUrlBtn" title="この人の入力画面を直接開くURLをコピー"><i class="ic" data-icon="link"></i><span class="label-long">直行URLをコピー</span><span class="label-short">URL</span></button>
+            <button type="button" class="copy-link-btn me-toggle-btn" id="setMeBtn" title="この端末の「自分」ボタンで、この人の入力画面を開くようにします"><i class="ic" data-icon="me"></i><span class="ic-text">自分に設定</span></button>
+          </div>
+          <h3 id="modalTitle">ステータス変更</h3>
+        </div>
+        <button type="button" class="close-btn" id="modalClose" aria-label="閉じる"><i class="ic" data-icon="close"></i></button>
+      </div>
+      <div class="status-btn-group" id="statusButtonGroup">
+        <!-- ボタンは app.js が CONFIG.STATUS_VIEW から生成 -->
+      </div>
+
+      <!-- 備考欄 ＆ よく使う備考 -->
+      <div class="note-section">
+        <div class="note-label">
+          <label for="noteInput">備考</label>
+          <span class="note-label-right">
+            <!-- 備考欄を書き換えて未保存のときだけ表示（modal-status.js） -->
+            <span id="noteDraftHint" class="note-draft-hint" hidden>未保存・ステータスを押すと一緒に保存</span>
+            <span id="noteCount">0/16</span>
+          </span>
+        </div>
+        <div class="note-row">
+          <input type="text" id="noteInput" maxlength="16" autocomplete="off" enterkeyhint="done" aria-describedby="noteDraftHint">
+          <button type="button" class="btn-outline-danger" id="noteClearBtn" title="備考を消して保存します（画面は閉じません）">削除</button>
+          <button type="button" class="btn-success" id="noteSaveBtn" title="備考だけを保存します（画面は閉じません）">備考を保存</button>
+        </div>
+        <div class="quick-notes-wrap">
+          <div class="quick-notes-header">
+            <span>よく使う備考</span>
+            <div class="quick-notes-actions">
+              <button type="button" id="execQuickDeleteBtn" class="btn-danger" hidden>選択した0件を削除</button>
+              <button type="button" id="toggleQuickDeleteBtn">選択して削除</button>
+              <button type="button" id="addQuickNoteBtn">＋ 現在の入力を登録</button>
+            </div>
+          </div>
+          <div id="quickNotesList" class="quick-notes-list"></div>
+        </div>
+      </div>
+
+      <!-- 予定予約（1人1件のみ） -->
+      <div class="schedule-section">
+        <div class="schedule-title">
+          <span class="ic-label"><i class="ic" data-icon="calendar"></i><span class="ic-text">予定予約（1件のみ・当日自動反映）</span></span>
+          <!-- 予約の入力を変えて未保存のときだけ表示（modal-status.js） -->
+          <span id="schedDraftHint" class="note-draft-hint" hidden>未保存・ステータスを押すと一緒に保存</span>
+        </div>
+        <div id="currentScheduleBox" class="current-schedule-box">
+          <span id="currentScheduleText"></span>
+          <button type="button" id="clearScheduleBtn">予約取消</button>
+        </div>
+        <div class="schedule-form-grid">
+          <input type="date" id="schedDateInput" aria-label="予約日">
+          <!-- 標準のプルダウンは選択肢に色の丸を描けないため、独自のメニューで表示する（modal-status.js）。
+               値の保持は非表示の select が担う（保存処理などは従来どおり select.value を読む） -->
+          <div class="sched-status-wrap">
+            <select id="schedStatusSelect" aria-hidden="true" tabindex="-1" hidden>
+              <!-- 選択肢は app.js が CONFIG.STATUS_VIEW から生成 -->
+            </select>
+            <button type="button" id="schedStatusBtn" class="sched-status-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="schedStatusList" aria-label="予約ステータス"></button>
+            <ul id="schedStatusList" class="sched-status-list" role="listbox" aria-label="予約ステータス" hidden></ul>
+          </div>
+        </div>
+        <div class="schedule-bottom-row">
+          <input type="text" id="schedNoteInput" maxlength="16" placeholder="予約時の備考" autocomplete="off" enterkeyhint="done">
+          <button type="button" class="btn-primary" id="saveScheduleBtn">予約を保存</button>
+        </div>
+      </div>
+
+      <div class="modal-error" id="modalError"></div>
+    </div>
+  </div>
+
+  <!-- 選択ダイアログ（席の移動／追加、解除する席の選択など。app.choose()）。ほかのモーダルより手前に出す -->
+  <div id="choiceModal" class="modal-overlay choice-modal">
+    <div class="modal-content choice-modal-content" role="dialog" aria-modal="true" aria-labelledby="choiceTitle">
+      <div class="modal-header">
+        <h3 id="choiceTitle">確認</h3>
+        <button type="button" class="close-btn" id="choiceClose" aria-label="閉じる"><i class="ic" data-icon="close"></i></button>
+      </div>
+      <p class="choice-message" id="choiceMessage"></p>
+      <div class="choice-buttons" id="choiceButtons"></div>
+    </div>
+  </div>
+
+  <!-- 設定・通信・各画面モジュール・全体制御の順に読み込み -->
+  <script src="js/config.js"></script>
+  <script src="js/icons.js"></script>
+  <!-- 【開発用】テストデータ。本番(SharePoint)配置時は次の1行を削除してください -->
+  <script src="js/sample-data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/save-queue.js"></script>
+  <script src="js/view-map.js"></script>
+  <script src="js/view-list.js"></script>
+  <script src="js/view-stats.js"></script>
+  <script src="js/modal-status.js"></script>
+  <script src="js/modal-settings.js"></script>
+  <script src="js/me.js"></script>
+  <script src="js/seat-assign.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

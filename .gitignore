@@ -1,0 +1,6 @@
+# 開発ツール・OS が作るファイル
+.claude/
+.vscode/
+Thumbs.db
+desktop.ini
+.DS_Store

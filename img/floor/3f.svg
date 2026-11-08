@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="960" viewBox="0 0 1680 960">
+<title>3F サンプル見取り図</title>
+<rect width="1680" height="960" fill="#f8fafc"/>
+<rect x="16" y="16" width="1648" height="928" rx="10" fill="#ffffff" stroke="#94a3b8" stroke-width="6"/>
+<rect x="60" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="220" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="380" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="540" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="700" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="860" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1020" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1180" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1340" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="1500" y="13" width="110" height="6" rx="2" fill="#bae6fd"/>
+<rect x="46" y="66" width="513" height="218" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="50" y="58" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">開発部</text>
+<rect x="596" y="66" width="508" height="218" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="1141" y="66" width="508" height="218" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<rect x="46" y="416" width="513" height="223" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="50" y="408" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">品質保証部</text>
+<rect x="596" y="416" width="508" height="223" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="600" y="408" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">設計部</text>
+<rect x="1141" y="416" width="314" height="348" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2"/>
+<text x="1145" y="408" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="17" font-weight="700" fill="#64748b">製造技術部</text>
+<rect x="40" y="790" width="330" height="130" rx="6" fill="#eef2f7" stroke="#94a3b8" stroke-width="3"/>
+<line x1="177.0" y1="790" x2="233.0" y2="790" stroke="#eef2f7" stroke-width="5"/>
+<text x="205.0" y="863.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#64748b">会議室D</text>
+<rect x="390" y="790" width="330" height="130" rx="6" fill="#eef2f7" stroke="#94a3b8" stroke-width="3"/>
+<line x1="527.0" y1="790" x2="583.0" y2="790" stroke="#eef2f7" stroke-width="5"/>
+<text x="555.0" y="863.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#64748b">検証ルーム</text>
+<rect x="740" y="790" width="290" height="130" rx="6" fill="#eef2f7" stroke="#94a3b8" stroke-width="3"/>
+<line x1="857.0" y1="790" x2="913.0" y2="790" stroke="#eef2f7" stroke-width="5"/>
+<text x="885.0" y="863.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#64748b">サーバールーム</text>
+<rect x="1050" y="790" width="210" height="130" rx="6" fill="#e5e7eb" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1127.0" y1="790" x2="1183.0" y2="790" stroke="#e5e7eb" stroke-width="5"/>
+<text x="1155.0" y="863.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#6b7280">EV・階段</text>
+<rect x="1280" y="790" width="170" height="130" rx="6" fill="#e5e7eb" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1337.0" y1="790" x2="1393.0" y2="790" stroke="#e5e7eb" stroke-width="5"/>
+<text x="1365.0" y="863.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#6b7280">トイレ</text>
+<rect x="1470" y="790" width="170" height="130" rx="6" fill="#e5e7eb" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1527.0" y1="790" x2="1583.0" y2="790" stroke="#e5e7eb" stroke-width="5"/>
+<text x="1555.0" y="863.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#6b7280">給湯室</text>
+<rect x="1480" y="440" width="160" height="300" rx="6" fill="#eef2f7" stroke="#94a3b8" stroke-width="3"/>
+<line x1="1532.0" y1="740" x2="1588.0" y2="740" stroke="#eef2f7" stroke-width="5"/>
+<text x="1560.0" y="598.0" text-anchor="middle" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="22" font-weight="700" fill="#64748b">試作室</text>
+<text x="1652" y="932" text-anchor="end" font-family="'Yu Gothic UI','Meiryo','Hiragino Sans','Noto Sans JP',sans-serif" font-size="14" fill="#94a3b8">サンプル見取り図（架空のレイアウト）</text>
+</svg>
