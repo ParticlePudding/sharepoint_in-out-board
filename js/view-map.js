@@ -823,7 +823,7 @@ const MapScreen = {
         const seatLabel = allUserSeats.length > 1 ? `${seatNo} (他: ${allUserSeats.filter(s => s !== seatNo).join(", ")})` : seatNo;
         const sched = app.parseSchedule(user[SCHEDULE]);
         const schedStatusName = sched ? (sched.status || "未入力") : "";
-        const schedText = sched ? ` ／ 次回予約: ${DateUtils.formatYmd(sched.date)} ${schedStatusName}${sched.note ? `(${sched.note})` : ""}` : "";
+        const schedText = sched ? ` ／ 次回予約: ${DateUtils.formatSchedule(sched)} ${schedStatusName}${sched.note ? `(${sched.note})` : ""}` : "";
         const deptLabel = user.Dept ? ` [${user.Dept}]` : "";
         card.title = `${seatLabel}${deptLabel}：クリックして編集${schedText}`;
 

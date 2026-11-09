@@ -318,7 +318,7 @@ const ListScreen = {
         if (!MapScreen.getItemFloorKeys(item).some(k => this.floors.has(k))) return false;
         if (!query) return true;
         const sched = app.parseSchedule(item[SCHEDULE]);
-        const schedStr = sched ? `${sched.date} ${DateUtils.formatYmd(sched.date)} ${sched.status || "未入力"} ${sched.note}` : "";
+        const schedStr = sched ? `${sched.date} ${DateUtils.formatSchedule(sched)} ${sched.status || "未入力"} ${sched.note}` : "";
         const statusStr = item.Status || "未入力";
         return [item[SORT_NO], item.Title, item.Dept, item.Seat, statusStr, item[NOTE], schedStr]
           .some(value => String(value ?? "").toLocaleLowerCase().includes(query));
@@ -396,7 +396,7 @@ const ListScreen = {
       if (sched) {
         const badge = document.createElement("span");
         badge.className = "sched-badge";
-        Icons.setLabel(badge, "calendar", `${DateUtils.formatYmd(sched.date)} `);
+        Icons.setLabel(badge, "calendar", `${DateUtils.formatSchedule(sched)} `);
         badge.append(Icons.statusDot(sched.status), `${sched.status || "未入力"}${sched.note ? `(${sched.note})` : ""}`);
         schedTd.appendChild(badge);
       } else {

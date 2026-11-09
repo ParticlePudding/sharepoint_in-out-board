@@ -7,17 +7,43 @@ const DateUtils = {
   get formatter() {
     if (!this._formatter) {
       this._formatter = new Intl.DateTimeFormat("en-US", {
-        timeZone: CONFIG.TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit"
+        timeZone: CONFIG.TIMEZONE, year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hourCycle: "h23"
       });
     }
     return this._formatter;
   },
 
-  // 端末のタイムゾーン設定に依存せず、CONFIG.TIMEZONE での今日の日付 (YYYY-MM-DD) を返す
-  getTodayYmd() {
+  // CONFIG.TIMEZONE での現在の { ymd: "YYYY-MM-DD", hm: "HH:MM" }
+  nowParts() {
     const parts = {};
     this.formatter.formatToParts(new Date()).forEach(p => { parts[p.type] = p.value; });
-    return `${parts.year}-${parts.month}-${parts.day}`;
+    const hour = parts.hour === "24" ? "00" : parts.hour; // 古いブラウザの h24 表記対策
+    return { ymd: `${parts.year}-${parts.month}-${parts.day}`, hm: `${hour}:${parts.minute}` };
+  },
+
+  // 端末のタイムゾーン設定に依存せず、CONFIG.TIMEZONE での今日の日付 (YYYY-MM-DD) を返す
+  getTodayYmd() {
+    return this.nowParts().ymd;
+  },
+
+  // CONFIG.TIMEZONE での現在日時 "YYYY-MM-DDTHH:MM"（予約日時との比較・datetime-local 用）
+  getNowYmdHm() {
+    const { ymd, hm } = this.nowParts();
+    return `${ymd}T${hm}`;
+  },
+
+  // "2026-11-07T09:05" に minutes 分を足す（CONFIG.TIMEZONE の壁時計として計算）
+  addMinutes(ymdHm, minutes) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(ymdHm);
+    if (!m) return ymdHm;
+    const t = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5] + minutes));
+    return t.toISOString().slice(0, 16);
+  },
+
+  // 予約の日付＋時刻 → "2026/11/7 09:05"（画面表示用）
+  formatSchedule(sched) {
+    return sched ? `${this.formatYmd(sched.date)} ${sched.time}` : "";
   },
 
   addDays(ymd, days) {
@@ -29,6 +55,14 @@ const DateUtils = {
   formatYmd(ymd) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ""));
     return m ? `${m[1]}/${Number(m[2])}/${Number(m[3])}` : String(ymd ?? "");
+  },
+
+  // "2026-11-07" → "2026/11/7(土)"（予約日のボタン表示用。西暦固定）
+  formatYmdWithWeekday(ymd) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ""));
+    if (!m) return String(ymd ?? "");
+    const dow = "日月火水木金土"[new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay()];
+    return `${this.formatYmd(ymd)}(${dow})`;
   },
 
   getTomorrowYmd() {
@@ -408,6 +442,8 @@ const app = {
     document.addEventListener("keydown", e => {
       if (e.key !== "Escape") return;
       if (this.isChoiceOpen()) { this.finishChoice(null); return; }
+      if (ClockPicker.isOpen()) { ClockPicker.close(); return; }
+      if (CalendarPicker.isOpen()) { CalendarPicker.close(); return; }
       if (MeScreen.isPickerOpen()) { MeScreen.closePicker(); return; }
       if (SeatAssign.isOpen()) { SeatAssign.close(); return; }
       if (StatsScreen.isMembersPopupOpen()) { StatsScreen.closeMembersPopup(); return; }
@@ -780,9 +816,14 @@ const app = {
     if (text) {
       try {
         const obj = JSON.parse(text);
-        if (obj && typeof obj.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(obj.date) && isValidStatus(obj.status)) {
+        // time は省略可（時刻のない旧形式は "00:00"＝その日の始まりに反映）
+        const time = obj && obj.time !== undefined && obj.time !== "" ? obj.time : "00:00";
+        if (obj && typeof obj.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(obj.date) &&
+            typeof time === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(time) && isValidStatus(obj.status)) {
           result = {
             date: obj.date,
+            time,
+            at: `${obj.date}T${time}`, // 比較用 "YYYY-MM-DDTHH:MM"
             status: obj.status,
             note: obj.note ? [...String(obj.note)].slice(0, CONFIG.NOTE_MAX).join("") : ""
           };
@@ -796,7 +837,7 @@ const app = {
     return result;
   },
 
-  /* ===== 予約の当日自動反映（サイネージPCのみ実行） =====
+  /* ===== 予約の自動反映（予約日時になったら。サイネージPCのみ実行） =====
    * 一般クライアント(100人規模)が同時に書き込むと競合・負荷が大きいため、
    * ?signage=1 で開いたPC（3〜4台）だけが担当する。
    *  - 開始前にランダム待機して、複数のサイネージが同時に書き込む確率を下げる
@@ -806,12 +847,9 @@ const app = {
   async processDueSchedules() {
     if (!this.isSignageMode || this._processingSchedules) return;
     const { NOTE, SCHEDULE } = CONFIG.FIELDS;
-    const today = DateUtils.getTodayYmd();
+    const isDue = sched => sched && sched.at <= DateUtils.getNowYmdHm();
 
-    const due = this.items.filter(item => {
-      const sched = this.parseSchedule(item[SCHEDULE]);
-      return sched && sched.date <= today;
-    });
+    const due = this.items.filter(item => isDue(this.parseSchedule(item[SCHEDULE])));
     if (!due.length) return;
 
     this._processingSchedules = true;
@@ -826,9 +864,10 @@ const app = {
         const sched = this.parseSchedule(latestRaw);
 
         // 他のサイネージが反映済み／本人が変更・取消済み／削除済み → こちらは何もしない（再読込で追従）
-        if (!sched || sched.date > today) return "stale";
+        if (!isDue(sched)) return "stale";
 
-        if (sched.date === today) {
+        // 当日の予約は反映。前日以前の予約（サイネージが止まっていた日など）は反映せず消すだけ
+        if (sched.date === DateUtils.getTodayYmd()) {
           await spApi.update(item.Id, { Status: sched.status, [NOTE]: sched.note, [SCHEDULE]: "" });
           item.Status = sched.status;
           item[NOTE] = sched.note;
@@ -886,7 +925,7 @@ const app = {
       if (!sA && sB) return 1;
       if (sA && !sB) return -1;
       if (sA && sB) {
-        const dCmp = sA.date.localeCompare(sB.date);
+        const dCmp = sA.at.localeCompare(sB.at);
         if (dCmp !== 0) return dCmp * dir;
         const stCmp = this.statusOrderOf(sA.status) - this.statusOrderOf(sB.status);
         if (stCmp !== 0) return stCmp * dir;
@@ -1008,6 +1047,8 @@ const app = {
         SaveQueue.overlay(this.items);
         this.renderCurrentView();
         this.markOk("軽量");
+        // 予約は分単位なので、軽量更新（1分ごと）のたびにも反映を確認する（サイネージのみ。期限の来た予約がなければ通信しない）
+        this.processDueSchedules().catch(e => console.error("予約反映エラー:", e));
       }
     } catch (err) {
       console.error(kind === "all" ? "全件データ取得エラー:" : "差分データ取得エラー:", err);
@@ -1036,7 +1077,7 @@ const app = {
       if (this.canBackgroundRefresh()) this.refreshFrequent();
     }, CONFIG.POLLING_INTERVAL_MS);
 
-    // サイネージ: 15分ごとに全件更新（＝予約の当日反映もこのタイミングで実行）
+    // サイネージ: 15分ごとに全件更新（予約の反映は全件・軽量どちらの更新の後にも確認する）
     if (this.isSignageMode) {
       this.signageTimerId = setInterval(() => {
         if (this.canBackgroundRefresh()) this.refreshAll();

@@ -464,7 +464,7 @@
       <!-- 予定予約（1人1件のみ） -->
       <div class="schedule-section">
         <div class="schedule-title">
-          <span class="ic-label"><i class="ic" data-icon="calendar"></i><span class="ic-text">予定予約（1件のみ・当日自動反映）</span></span>
+          <span class="ic-label"><i class="ic" data-icon="calendar"></i><span class="ic-text">予定予約（1件のみ・指定日時に自動反映）</span></span>
           <!-- 予約の入力を変えて未保存のときだけ表示（modal-status.js） -->
           <span id="schedDraftHint" class="note-draft-hint" hidden>未保存・ステータスを押すと一緒に保存</span>
         </div>
@@ -473,7 +473,12 @@
           <button type="button" id="clearScheduleBtn">予約取消</button>
         </div>
         <div class="schedule-form-grid">
-          <input type="date" id="schedDateInput" aria-label="予約日">
+          <!-- 日付は西暦固定のカレンダー（calendar-picker.js。標準の日付欄は和暦表示になる環境があるため）、
+               時刻は時計の文字盤（clock-picker.js）で選ぶ。値の保持は非表示の input が担う -->
+          <input type="hidden" id="schedDateInput">
+          <button type="button" id="schedDateBtn" class="sched-pick-btn" aria-haspopup="dialog" aria-expanded="false" aria-label="予約日"></button>
+          <input type="hidden" id="schedTimeInput">
+          <button type="button" id="schedTimeBtn" class="sched-pick-btn" aria-haspopup="dialog" aria-expanded="false" aria-label="予約時刻"></button>
           <!-- 標準のプルダウンは選択肢に色の丸を描けないため、独自のメニューで表示する（modal-status.js）。
                値の保持は非表示の select が担う（保存処理などは従来どおり select.value を読む） -->
           <div class="sched-status-wrap">
@@ -516,6 +521,8 @@
   <script src="js/view-map.js"></script>
   <script src="js/view-list.js"></script>
   <script src="js/view-stats.js"></script>
+  <script src="js/calendar-picker.js"></script>
+  <script src="js/clock-picker.js"></script>
   <script src="js/modal-status.js"></script>
   <script src="js/modal-settings.js"></script>
   <script src="js/me.js"></script>
