@@ -5,7 +5,7 @@ const StatusModal = {
   deleteMode: false,          // 「よく使う備考」の選択削除モード
   deleteSelected: new Set(),  // 削除対象として選択中の添字
   savedNote: "",              // 保存済みの備考（備考欄がこれと違えば「未保存の下書き」）
-  schedBaseline: null,        // 予約欄の表示直後の値 {date, status, note}（これと違えば「未保存の下書き」）
+  schedBaseline: null,        // 予約欄の表示直後の値 {date, time, status, note}（これと違えば「未保存の下書き」）
 
   /* 保存と画面を閉じるタイミング（ステータスと備考を続けて入力できるように）
    * - ステータスボタン … 押すとすぐ保存して閉じる。備考欄・予定予約に未保存の入力があれば一緒に保存
@@ -41,9 +41,33 @@ const StatusModal = {
     const schedNoteInput = document.getElementById("schedNoteInput");
     // 予約欄の変更をオレンジ表示（未保存の下書き）に反映
     schedNoteInput.addEventListener("input", () => this.syncScheduleUi());
-    const schedDateInput = document.getElementById("schedDateInput");
-    schedDateInput.addEventListener("input", () => this.syncScheduleUi());
-    schedDateInput.addEventListener("change", () => this.syncScheduleUi());
+    // 予約日: 西暦のカレンダーで選ぶ（選んだ値は非表示の #schedDateInput に入れる）。今日から選べる
+    const schedDateBtn = document.getElementById("schedDateBtn");
+    schedDateBtn.addEventListener("click", () => {
+      const dateInput = document.getElementById("schedDateInput");
+      CalendarPicker.open({
+        anchor: schedDateBtn,
+        value: dateInput.value,
+        min: DateUtils.getTodayYmd(),
+        onSelect: value => {
+          dateInput.value = value;
+          this.syncScheduleUi();
+        }
+      });
+    });
+    // 予約時刻: 時計の文字盤で選ぶ（選んだ値は非表示の #schedTimeInput に入れる）
+    const schedTimeBtn = document.getElementById("schedTimeBtn");
+    schedTimeBtn.addEventListener("click", () => {
+      const timeInput = document.getElementById("schedTimeInput");
+      ClockPicker.open({
+        anchor: schedTimeBtn,
+        value: timeInput.value,
+        onSelect: value => {
+          timeInput.value = value;
+          this.syncScheduleUi();
+        }
+      });
+    });
     schedNoteInput.addEventListener("keydown", e => {
       if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) {
         e.preventDefault();
@@ -121,6 +145,8 @@ const StatusModal = {
     this.deleteMode = false;
     this.deleteSelected.clear();
     this.closeSchedStatusMenu(false);
+    ClockPicker.close();
+    CalendarPicker.close();
     document.getElementById("statusModal").classList.remove("active");
   },
 
@@ -331,32 +357,35 @@ const StatusModal = {
     const box = document.getElementById("currentScheduleBox");
     const textEl = document.getElementById("currentScheduleText");
     const dateInput = document.getElementById("schedDateInput");
+    const timeInput = document.getElementById("schedTimeInput");
     const statusSelect = document.getElementById("schedStatusSelect");
     const noteInput = document.getElementById("schedNoteInput");
 
-    const minDate = DateUtils.getTomorrowYmd();
-    dateInput.min = minDate;
+    // 予約できるのは今より後（分単位。今日の日付も選べる）。初期値は従来どおり「明日 0:00」＝翌日の始まりに反映
+    const minAt = DateUtils.addMinutes(DateUtils.getNowYmdHm(), 1);
+    const setAt = (date, time) => { dateInput.value = date; timeInput.value = time; };
 
     const sched = item ? app.parseSchedule(item[CONFIG.FIELDS.SCHEDULE]) : null;
     if (sched) {
       box.classList.add("active");
       const statusLabel = sched.status || "未入力";
-      // 「予約中: 日付 → ●ステータス（備考）」
+      // 「予約中: 日付 時刻 → ●ステータス（備考）」
       const statusEl = document.createElement("span");
       statusEl.className = "sched-status-label";
       Icons.setStatusLabel(statusEl, sched.status, statusLabel);
       textEl.replaceChildren(
-        `予約中: ${DateUtils.formatYmd(sched.date)} → `,
+        `予約中: ${DateUtils.formatSchedule(sched)} → `,
         statusEl,
         sched.note ? `（${sched.note}）` : ""
       );
-      dateInput.value = sched.date >= minDate ? sched.date : minDate;
+      if (sched.at >= minAt) setAt(sched.date, sched.time);
+      else setAt(DateUtils.getTomorrowYmd(), "00:00");
       statusSelect.value = sched.status;
       noteInput.value = sched.note || "";
     } else {
       box.classList.remove("active");
       textEl.textContent = "";
-      dateInput.value = minDate;
+      setAt(DateUtils.getTomorrowYmd(), "00:00");
       statusSelect.value = STATUS.VACATION;
       noteInput.value = "";
     }
@@ -369,6 +398,8 @@ const StatusModal = {
   currentScheduleValues() {
     return {
       date: document.getElementById("schedDateInput").value,
+      // "HH:MM"（秒が付くブラウザもあるので分までにそろえる）
+      time: document.getElementById("schedTimeInput").value.slice(0, 5),
       status: document.getElementById("schedStatusSelect").value,
       note: document.getElementById("schedNoteInput").value.trim()
     };
@@ -377,7 +408,7 @@ const StatusModal = {
   isScheduleDirty() {
     if (this.currentEditingId === null || !this.schedBaseline) return false;
     const now = this.currentScheduleValues();
-    return ["date", "status", "note"].some(k => now[k] !== this.schedBaseline[k]);
+    return ["date", "time", "status", "note"].some(k => now[k] !== this.schedBaseline[k]);
   },
 
   // 変えた欄をオレンジ表示。「未保存・ステータスを押すと一緒に保存」を出す
@@ -385,7 +416,12 @@ const StatusModal = {
     const base = this.schedBaseline;
     const now = this.currentScheduleValues();
     const mark = (el, key) => el.classList.toggle("dirty", !!base && now[key] !== base[key]);
-    mark(document.getElementById("schedDateInput"), "date");
+    const dateBtn = document.getElementById("schedDateBtn");
+    Icons.setLabel(dateBtn, "calendar", now.date ? DateUtils.formatYmdWithWeekday(now.date) : "----/--/--");
+    mark(dateBtn, "date");
+    const timeBtn = document.getElementById("schedTimeBtn");
+    Icons.setLabel(timeBtn, "clock", now.time || "--:--");
+    mark(timeBtn, "time");
     mark(document.getElementById("schedStatusBtn"), "status");
     mark(document.getElementById("schedNoteInput"), "note");
     document.getElementById("schedDraftHint").hidden = !this.isScheduleDirty();
@@ -393,11 +429,13 @@ const StatusModal = {
 
   // 予約欄の入力を確認して保存用の値を作る。不備があれば { error }
   readScheduleForm() {
-    const { date, status, note } = this.currentScheduleValues();
+    const { date, time, status, note } = this.currentScheduleValues();
     if (!isValidStatus(status)) return { error: "予約するステータスを選択してください。" };
-    if (!date || date <= DateUtils.getTodayYmd()) return { error: "予約日は明日以降の日付を指定してください。" };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "予約日を入力してください。" };
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { error: "予約時刻を入力してください。" };
+    if (`${date}T${time}` <= DateUtils.getNowYmdHm()) return { error: "予約日時は今より後の日時を指定してください。" };
     if ([...note].length > CONFIG.NOTE_MAX) return { error: `予約時の備考は${CONFIG.NOTE_MAX}文字以内で入力してください。` };
-    return { payload: JSON.stringify({ date, status, note }) };
+    return { payload: JSON.stringify({ date, time, status, note }) };
   },
 
   /* ===== 予約ステータスの選択メニュー（色の丸付き） =====

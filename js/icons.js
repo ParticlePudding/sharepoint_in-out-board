@@ -19,6 +19,7 @@ const Icons = {
     search: '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>', // lucide: search
     close: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>', // lucide: x
     calendar: '<path d="M8 2v3"/><path d="M16 2v3"/><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/>', // lucide: calendar
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>', // lucide: clock
     pin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>', // lucide: map-pin
     link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>', // lucide: link
     group: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>', // lucide: users

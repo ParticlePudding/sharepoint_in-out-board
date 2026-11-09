@@ -25,10 +25,10 @@ const SAMPLE_STATS_GROUPS = [
 
 // 架空の社員 108名（1F: 管理部門 / 2F: 営業部門 / 3F: 技術部門）
 const SAMPLE_ITEMS = [
-    { Id: 1,   SortNo: 1,   Seat: "1F-A01", Title: "中野 玲奈", Dept: "経営企画部", Status: "会議", Remarks: "中期計画レビュー", NextSchedule: '{"date":"2026-11-10","status":"出張","note":"大阪支社打合せ"}' },
+    { Id: 1,   SortNo: 1,   Seat: "1F-A01", Title: "中野 玲奈", Dept: "経営企画部", Status: "会議", Remarks: "中期計画レビュー", NextSchedule: '{"date":"2026-11-10","time":"08:30","status":"出張","note":"大阪支社打合せ"}' },
     { Id: 2,   SortNo: 2,   Seat: "1F-A02", Title: "坂本 颯太", Dept: "経営企画部", Status: "出勤", Remarks: "役員会資料作成", NextSchedule: "" },
     { Id: 3,   SortNo: 3,   Seat: "1F-A03", Title: "斎藤 千夏", Dept: "経営企画部", Status: "午前半休", Remarks: "13時出社", NextSchedule: "" },
-    { Id: 4,   SortNo: 4,   Seat: "1F-A04", Title: "遠藤 修平", Dept: "経営企画部", Status: "出勤", Remarks: "経営会議", NextSchedule: '{"date":"2026-11-12","status":"休暇","note":"有休"}' },
+    { Id: 4,   SortNo: 4,   Seat: "1F-A04", Title: "遠藤 修平", Dept: "経営企画部", Status: "出勤", Remarks: "経営会議", NextSchedule: '{"date":"2026-11-12","time":"00:00","status":"休暇","note":"有休"}' },
     { Id: 5,   SortNo: 5,   Seat: "1F-A05", Title: "安藤 芽衣", Dept: "経営企画部", Status: "出勤", Remarks: "KPI集計", NextSchedule: "" },
     { Id: 6,   SortNo: 6,   Seat: "1F-A06", Title: "西村 亮介", Dept: "経営企画部", Status: "出勤", Remarks: "事業計画打合せ", NextSchedule: "" },
     { Id: 7,   SortNo: 7,   Seat: "1F-B01", Title: "岡本 弘美", Dept: "総務部", Status: "出勤", Remarks: "備品発注", NextSchedule: "" },
@@ -59,7 +59,7 @@ const SAMPLE_ITEMS = [
     { Id: 32,  SortNo: 32,  Seat: "1F-F02", Title: "宮本 正人", Dept: "情報システム部", Status: "退勤", Remarks: "", NextSchedule: "" },
     { Id: 33,  SortNo: 33,  Seat: "1F-F03", Title: "丸山 崇", Dept: "情報システム部", Status: "現場", Remarks: "ヘルプデスク", NextSchedule: "" },
     { Id: 34,  SortNo: 34,  Seat: "1F-F04", Title: "高橋 哲也", Dept: "情報システム部", Status: "休暇", Remarks: "有休", NextSchedule: "" },
-    { Id: 35,  SortNo: 35,  Seat: "1F-F05, 3F-A06", Title: "岩崎 真央", Dept: "情報システム部", Status: "会議", Remarks: "ネットワーク保守", NextSchedule: '{"date":"2026-11-09","status":"会議","note":"全社会議"}' },
+    { Id: 35,  SortNo: 35,  Seat: "1F-F05, 3F-A06", Title: "岩崎 真央", Dept: "情報システム部", Status: "会議", Remarks: "ネットワーク保守", NextSchedule: '{"date":"2026-11-09","time":"15:00","status":"会議","note":"全社会議"}' },
     { Id: 36,  SortNo: 36,  Seat: "1F-F06", Title: "久保 祐介", Dept: "情報システム部", Status: "出勤", Remarks: "アカウント棚卸", NextSchedule: "" },
     { Id: 37,  SortNo: 37,  Seat: "2F-A01", Title: "村田 洋平", Dept: "営業一部", Status: "出勤", Remarks: "A社訪問", NextSchedule: '{"date":"2026-11-11","status":"休暇","note":"振替休日"}' },
     { Id: 38,  SortNo: 38,  Seat: "2F-A02", Title: "山本 健二", Dept: "営業一部", Status: "会議", Remarks: "B社 見積提出", NextSchedule: "" },
@@ -98,7 +98,7 @@ const SAMPLE_ITEMS = [
     { Id: 71,  SortNo: 71,  Seat: "2F-F05", Title: "内田 光", Dept: "カスタマーサポート部", Status: "出勤", Remarks: "FAQ更新", NextSchedule: "" },
     { Id: 72,  SortNo: 72,  Seat: "2F-F06", Title: "原田 瑞希", Dept: "カスタマーサポート部", Status: "会議", Remarks: "チャット当番", NextSchedule: "" },
     { Id: 73,  SortNo: 73,  Seat: "3F-A01", Title: "田村 雄太", Dept: "開発部", Status: "会議", Remarks: "設計レビュー", NextSchedule: "" },
-    { Id: 74,  SortNo: 74,  Seat: "3F-A02", Title: "石川 沙織", Dept: "開発部", Status: "出勤", Remarks: "コードレビュー", NextSchedule: '{"date":"2026-11-10","status":"会議","note":"予算査定会議"}' },
+    { Id: 74,  SortNo: 74,  Seat: "3F-A02", Title: "石川 沙織", Dept: "開発部", Status: "出勤", Remarks: "コードレビュー", NextSchedule: '{"date":"2026-11-10","time":"13:30","status":"会議","note":"予算査定会議"}' },
     { Id: 75,  SortNo: 75,  Seat: "3F-A03", Title: "太田 朋美", Dept: "開発部", Status: "出勤", Remarks: "リリース作業", NextSchedule: "" },
     { Id: 76,  SortNo: 76,  Seat: "3F-A04", Title: "工藤 沙也加", Dept: "開発部", Status: "退勤", Remarks: "", NextSchedule: "" },
     { Id: 77,  SortNo: 77,  Seat: "3F-A05", Title: "杉山 陸", Dept: "開発部", Status: "出勤", Remarks: "障害調査", NextSchedule: "" },

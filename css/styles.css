@@ -1088,7 +1088,8 @@ button:disabled { opacity: 0.5; cursor: default; }
 .note-row input.dirty,
 .schedule-form-grid input.dirty,
 .schedule-bottom-row input.dirty,
-.sched-status-btn.dirty { background: #fffbeb; border-color: #f59e0b; }
+.sched-status-btn.dirty,
+.sched-pick-btn.dirty { background: #fffbeb; border-color: #f59e0b; }
 .schedule-title { flex-wrap: wrap; gap: 2px 8px; }
 .note-label-right { display: inline-flex; align-items: center; gap: 8px; min-width: 0; }
 .note-draft-hint { color: #b45309; font-weight: bold; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1162,11 +1163,16 @@ button:disabled { opacity: 0.5; cursor: default; }
   border-color: #fca5a5;
   color: #b91c1c;
 }
+/* 予約日・予約時刻・ステータス。幅が狭いとき（スマホ）は日付＋時刻の下にステータスを置く */
 .schedule-form-grid {
   display: grid;
-  grid-template-columns: 1fr 125px;
+  grid-template-columns: minmax(0, 1fr) 100px 125px;
   gap: 6px;
   margin-bottom: 6px;
+}
+@media (max-width: 480px) {
+  .schedule-form-grid { grid-template-columns: minmax(0, 1fr) 100px; }
+  .schedule-form-grid .sched-status-wrap { grid-column: 1 / -1; }
 }
 .schedule-form-grid input,
 .schedule-form-grid select,
@@ -1713,6 +1719,137 @@ button:disabled { opacity: 0.5; cursor: default; }
 .sched-status-list [role="option"][aria-selected="true"] { background: #e3f2fd; color: #0d47a1; font-weight: bold; }
 @media (hover: hover) { .sched-status-list [role="option"]:hover { background: #f1f5f9; } }
 .sched-status-label { display: inline-flex; align-items: center; font-weight: bold; }
+
+/* 予約日・予約時刻のボタン（押すとカレンダー／時計が開く） */
+.sched-pick-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 7px 8px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+}
+.sched-pick-btn .ic { color: #64748b; }
+.sched-pick-btn .ic-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sched-pick-btn[aria-expanded="true"] { border-color: #1976d2; }
+
+/* カレンダー・時計の共通部分（calendar-picker.js / clock-picker.js）。ステータス画面の上に重ねて中央に出す */
+.picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 23, 42, 0.35);
+}
+.picker-overlay[hidden] { display: none; }
+.picker-dialog {
+  width: 296px;
+  max-width: 100%;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.3);
+  overflow: hidden;
+}
+.picker-head { padding: 14px 12px; background: #1976d2; color: #fff; }
+.picker-foot {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 14px;
+}
+.picker-foot-gap { flex: 1 1 auto; }
+
+/* 時計の文字盤 */
+.clock-head { display: flex; align-items: center; justify-content: center; gap: 2px; }
+.clock-part {
+  padding: 2px 8px;
+  font-size: 40px;
+  font-weight: bold;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.6);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+}
+.clock-part:active { background: rgba(255, 255, 255, 0.12); }
+.clock-part.active { color: #fff; background: rgba(255, 255, 255, 0.18); }
+.clock-colon { font-size: 36px; font-weight: bold; color: rgba(255, 255, 255, 0.8); }
+.clock-dial {
+  width: 260px;
+  max-width: calc(100% - 24px);
+  margin: 14px auto 6px;
+  touch-action: none;   /* 指でなぞった時に画面がスクロールしないように */
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  border-radius: 50%;
+  outline: none;
+}
+.clock-dial:focus-visible { box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.45); }
+.clock-dial svg { display: block; width: 100%; height: auto; }
+.clock-face { fill: #eef2f7; }
+.clock-hand { stroke: #1976d2; stroke-width: 2; }
+.clock-center { fill: #1976d2; }
+.clock-knob { fill: #1976d2; }
+.clock-knob-dot { fill: #fff; }
+.clock-num {
+  font-size: 15px;
+  fill: #1e293b;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+.clock-num.inner { font-size: 12px; fill: #64748b; }
+.clock-num.selected { fill: #fff; font-weight: bold; }
+
+/* カレンダー（西暦） */
+.cal-head-year { font-size: 14px; color: rgba(255, 255, 255, 0.75); font-weight: bold; }
+.cal-head-date { font-size: 26px; font-weight: bold; line-height: 1.25; }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 2px; }
+.cal-month { font-weight: bold; font-size: 15px; }
+.cal-nav-btn { width: 36px; height: 36px; padding: 0; font-size: 22px; line-height: 1; border: none; border-radius: 50%; background: transparent; color: #334155; }
+@media (hover: hover) { .cal-nav-btn:not(:disabled):hover { background: #f1f5f9; } }
+.cal-nav-btn:disabled { opacity: 0.25; }
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  padding: 4px 12px 4px;
+  min-height: 252px;     /* 5週と6週の月で高さが変わってボタンが動かないように */
+  align-content: start;
+}
+.cal-dow { text-align: center; font-size: 12px; color: #64748b; padding: 4px 0; }
+.cal-dow.sun, .cal-day.sun { color: #c62828; }
+.cal-dow.sat, .cal-day.sat { color: #1565c0; }
+.cal-day {
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 36px;
+  justify-self: center;
+  padding: 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: #1e293b;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+}
+@media (hover: hover) { .cal-day:not(:disabled):not(.selected):hover { background: #f1f5f9; } }
+.cal-day.today { border-color: #1976d2; }
+.cal-day.selected { background: #1976d2; border-color: #1976d2; color: #fff; font-weight: bold; }
+.cal-day:disabled { color: #cbd5e1; opacity: 1; }
+.cal-day:focus-visible { outline: 2px solid #1976d2; outline-offset: 1px; }
+.cal-today { padding: 6px 12px; font-size: 13px; }
 .sched-badge .status-dot { margin-right: 0.3em; }
 
 /* リスト画面：上部の操作欄は固定し、表（またはカード）だけをスクロールする。
