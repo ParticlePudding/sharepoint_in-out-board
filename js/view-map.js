@@ -62,7 +62,8 @@ const MapScreen = {
     const savedSearch = app.loadCache(keys.sideListSearch);
     const savedSideFloors = app.loadCache(keys.sideListFloors, true);
 
-    if (savedFloor && CONFIG.FLOORS.some(f => f.id === savedFloor)) {
+    // サイネージは端末に残ったフロアを使わない（誰かが切り替えたまま戻らなくならないように。URL の floor= か先頭のフロア）
+    if (!app.isSignageMode && savedFloor && CONFIG.FLOORS.some(f => f.id === savedFloor)) {
       this.currentFloorId = savedFloor;
     }
     if (isValidStatus(savedBulkStatus)) {
@@ -346,12 +347,8 @@ const MapScreen = {
 
     if (!StatusFilterUtil.matches(this.sideListStatusFilter, status)) return false;
 
-    const q = (this.sideListSearch || "").trim().toLocaleLowerCase();
-    if (!q) return true;
-
-    const statusStr = status || "未入力";
-    return [item[SORT_NO], item.Title, item.Dept, statusStr, item[NOTE]]
-      .some(v => String(v ?? "").toLocaleLowerCase().includes(q));
+    const statusStr = StatusFilterUtil.normalizeStatus(status) || "未入力";
+    return TextUtil.matches([item[SORT_NO], item.Title, item.Dept, statusStr, item[NOTE]], this.sideListSearch);
   },
 
   renderSideList() {
@@ -400,9 +397,15 @@ const MapScreen = {
 
     rows.forEach(item => {
       const tr = document.createElement("tr");
-      tr.title = "クリックしてステータスを編集";
+      tr.title = this.isBulkMode ? "クリックして一括変更の対象に選択／解除" : "クリックしてステータスを編集";
       tr.tabIndex = 0;
-      const openModal = () => StatusModal.open(Number(item.Id), item.Title || "名前未設定");
+      tr.dataset.id = item.Id;
+      if (this.isBulkMode) {
+        const on = this.selectedIds.has(Number(item.Id));
+        tr.classList.toggle("selected", on);
+        tr.setAttribute("aria-selected", String(on));
+      }
+      const openModal = () => this.openOrSelect(item);
       tr.addEventListener("click", openModal);
       tr.addEventListener("keydown", e => {
         if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(); }
@@ -425,7 +428,7 @@ const MapScreen = {
       }
 
       const statusTd = document.createElement("td");
-      const status = item.Status ?? "";
+      const status = StatusFilterUtil.normalizeStatus(item.Status);
       const stInfo = getStatusView(status);
       const pill = document.createElement("span");
       pill.className = `status-pill ${stInfo.pill}`;
@@ -464,13 +467,53 @@ const MapScreen = {
     vp.addEventListener("pointercancel", e => this.onUp(e, true));
     vp.addEventListener("wheel", e => this.onWheel(e), { passive: false });
     vp.addEventListener("keydown", e => this.onCardKeydown(e));
+    // キーボードでも拡大・縮小できるようにする（＋／－／0＝全体）。フォーカスしたカードが見える位置に移す
+    vp.addEventListener("keydown", e => this.onZoomKeydown(e));
+    vp.addEventListener("focusin", e => this.revealCard(e.target));
     // タッチのタップは、この click の時点でモーダルを開く（queueTapActivation）
     vp.addEventListener("click", () => { if (this.pendingTapCard) this.flushTapActivation(); });
 
-    const fitBtn = document.getElementById("zoomFit");
-    fitBtn.addEventListener("click", () => this.fit());
-    fitBtn.addEventListener("pointerdown", e => e.stopPropagation());
-    fitBtn.addEventListener("wheel", e => e.stopPropagation());
+    document.getElementById("zoomFit").addEventListener("click", () => this.fit());
+    const zoomBy = k => this.zoomAt(this.scale * k, this.viewport.clientWidth / 2, this.viewport.clientHeight / 2);
+    document.getElementById("zoomIn").addEventListener("click", () => zoomBy(1.25));
+    document.getElementById("zoomOut").addEventListener("click", () => zoomBy(1 / 1.25));
+    const controls = document.getElementById("zoomControls");
+    controls.addEventListener("pointerdown", e => e.stopPropagation());
+    controls.addEventListener("wheel", e => e.stopPropagation());
+    controls.addEventListener("keydown", e => e.stopPropagation()); // ボタン上の Enter をカード操作として扱わない
+  },
+
+  onZoomKeydown(e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return; // Ctrl+＋ などはブラウザの拡大に任せる
+    const cx = this.viewport.clientWidth / 2;
+    const cy = this.viewport.clientHeight / 2;
+    if (e.key === "+" || e.key === "=" || e.key === ";") {
+      e.preventDefault();
+      this.zoomAt(this.scale * 1.25, cx, cy);
+    } else if (e.key === "-" || e.key === "_") {
+      e.preventDefault();
+      this.zoomAt(this.scale / 1.25, cx, cy);
+    } else if (e.key === "0") {
+      e.preventDefault();
+      this.fit();
+    }
+  },
+
+  // 拡大中にキーボードでカードへ移ったら、そのカードが見えるように地図を動かす
+  revealCard(el) {
+    if (!el || !el.classList || !el.classList.contains("seat-card") || this.autoFit) return;
+    const vw = this.viewport.clientWidth, vh = this.viewport.clientHeight;
+    const left = el.offsetLeft * this.scale + this.tx;
+    const top = el.offsetTop * this.scale + this.ty;
+    const w = el.offsetWidth * this.scale, h = el.offsetHeight * this.scale;
+    const margin = 16;
+    if (left < margin) this.tx += margin - left;
+    else if (left + w > vw - margin) this.tx -= left + w - (vw - margin);
+    if (top < margin) this.ty += margin - top;
+    else if (top + h > vh - margin) this.ty -= top + h - (vh - margin);
+    this.applyTransform();
+    this.viewport.scrollLeft = 0;
+    this.viewport.scrollTop = 0;
   },
 
   get minScale() { return this.fitScale; },
@@ -647,6 +690,12 @@ const MapScreen = {
     else StatusModal.open(id, card.dataset.name);
   },
 
+  // サイドリスト・カード一覧から押された時：一括変更中は選択、それ以外はステータス画面
+  openOrSelect(item) {
+    if (this.isBulkMode) this.toggleCardSelect(Number(item.Id));
+    else StatusModal.open(Number(item.Id), item.Title || "名前未設定");
+  },
+
   onShow() {
     requestAnimationFrame(() => {
       this.recalcFit();
@@ -733,7 +782,7 @@ const MapScreen = {
     const floor = CONFIG.FLOORS.find(f => f.id === floorId);
     if (!floor) return false;
     this.currentFloorId = floorId;
-    app.saveCache(CONFIG.CACHE_KEYS.floor, floorId);
+    if (!app.isSignageMode) app.saveCache(CONFIG.CACHE_KEYS.floor, floorId);
     this.renderFloorButtons();
     return true;
   },
@@ -758,11 +807,15 @@ const MapScreen = {
     container.style.height = `${mapH}px`;
     container.style.backgroundImage = `url("${String(currentFloor.image).replace(/["\\]/g, "\\$&")}")`;
 
-    const seatMap = {};
+    // 席番号 → その席の人（同じ席に複数人が入っていることもある。表示するのは No. 順で先頭の人）
+    const seatOccupants = {};
     app.items.forEach(item => {
       app.parseSeats(item.Seat).forEach(seatNo => {
-        seatMap[seatNo] = item;
+        (seatOccupants[seatNo] = seatOccupants[seatNo] || []).push(item);
       });
+    });
+    Object.values(seatOccupants).forEach(list => {
+      if (list.length > 1) list.sort((a, b) => app.compareItemsBy(a, b, "SortNo", "asc"));
     });
 
     const frag = document.createDocumentFragment();
@@ -771,7 +824,8 @@ const MapScreen = {
 
     Object.keys(floorSeats).forEach(seatNo => {
       const pos = floorSeats[seatNo];
-      const user = seatMap[seatNo];
+      const occupants = seatOccupants[seatNo] || [];
+      const user = occupants[0];
       const { width, height, isVertical } = this.resolveCardSize(pos);
 
       const card = document.createElement("div");
@@ -825,7 +879,18 @@ const MapScreen = {
         const schedStatusName = sched ? (sched.status || "未入力") : "";
         const schedText = sched ? ` ／ 次回予約: ${DateUtils.formatSchedule(sched)} ${schedStatusName}${sched.note ? `(${sched.note})` : ""}` : "";
         const deptLabel = user.Dept ? ` [${user.Dept}]` : "";
-        card.title = `${seatLabel}${deptLabel}：クリックして編集${schedText}`;
+        const dupText = occupants.length > 1
+          ? `【重複】この席には ${occupants.map(o => `${o.Title || "名前未設定"}さん`).join("・")} の${occupants.length}名が割り当てられています ／ `
+          : "";
+        // 名前は省略表示されることがあるので、全文をツールチップに入れる
+        card.title = `${dupText}${user.Title || "名前未設定"} ／ ${seatLabel}${deptLabel}：クリックして編集${schedText}`;
+        if (occupants.length > 1) {
+          card.classList.add("seat-dup");
+          const dup = document.createElement("span");
+          dup.className = "seat-dup-badge";
+          dup.textContent = `重複${occupants.length}名`;
+          card.appendChild(dup);
+        }
 
         const deptSymbolEl = this.createDeptSymbolElement(user.Dept);
         if (deptSymbolEl) card.appendChild(deptSymbolEl);
@@ -936,22 +1001,26 @@ const MapScreen = {
     id = Number(id);
     if (this.selectedIds.has(id)) this.selectedIds.delete(id);
     else this.selectedIds.add(id);
+    const on = this.selectedIds.has(id);
     document.querySelectorAll(`.seat-card[data-id="${id}"]`).forEach(card => {
-      const on = this.selectedIds.has(id);
       card.classList.toggle("selected", on);
       card.setAttribute("aria-pressed", String(on));
+    });
+    document.querySelectorAll(`#mapSideListBody tr[data-id="${id}"], #mapSideCardContainer .side-mini-card[data-id="${id}"]`).forEach(el => {
+      el.classList.toggle("selected", on);
+      if (el.tagName === "TR") el.setAttribute("aria-selected", String(on));
     });
     this.updateBulkSelectionCount();
   },
 
   updateBulkSelectionCount() {
     document.getElementById("bulkSelectionCount").textContent =
-      this.selectedIds.size ? `${this.selectedIds.size}名を選択中` : "座席カードをクリックして対象者を選択してください";
+      this.selectedIds.size ? `${this.selectedIds.size}名を選択中` : "座席カード（席のない人はサイドリスト）をクリックして対象者を選択してください";
   },
 
   async executeBulkUpdate() {
     if (!this.selectedIds.size) {
-      alert("座席カードをクリックして対象のメンバーを選択してください。");
+      alert("座席カード（席のない人はサイドリスト）をクリックして対象のメンバーを選択してください。");
       return;
     }
     const newStatus = this.bulkSelectedStatus;
@@ -980,6 +1049,12 @@ const MapScreen = {
 
     // 画面にはすぐ反映し、送信は SaveQueue が裏で行う（同時5件まで・失敗時は自動再送のうえ通知）
     ids.forEach(id => SaveQueue.enqueue(id, fields));
+    // 備考の指定は毎回やり直す（前回の備考が残ったまま、次の一括変更で別の人に付かないように）
+    const noteCheck = document.getElementById("bulkNoteCheck");
+    const noteInput = document.getElementById("bulkNoteInput");
+    noteCheck.checked = false;
+    noteInput.value = "";
+    noteInput.disabled = true;
     this.toggleBulkMode(false); // 中で再描画される
     app.toast(`${ids.length}名のステータスを変更しました`);
   }

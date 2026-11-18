@@ -202,6 +202,15 @@ const spApi = {
     return await this.fetchAllPaged(`Id,Status,${NOTE},${SCHEDULE},Seat`);
   },
 
+  // 【席の割り当て用】全員の席だけを取得（割り当てる直前に、他の人がその席に入っていないか確かめる）
+  async getSeatsOnly() {
+    if (CONFIG.USE_MOCK_DATA) {
+      await this.mockDelay();
+      return this.ensureMockData().map(i => ({ Id: i.Id, Seat: i.Seat }));
+    }
+    return await this.fetchAllPaged("Id,Seat");
+  },
+
   // 【開発用】モックでも通信の遅さを再現する（?mockdelay=ミリ秒）。本番では使われない
   mockDelay() {
     const m = /[?&]mockdelay=(\d+)/.exec(location.search);

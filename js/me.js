@@ -69,10 +69,7 @@ const MeScreen = {
       StatusModal.open(Number(me.Id), me.Title || "名前未設定");
       return;
     }
-    if (!app.items.length) {
-      app.toast("社員データを読み込み中です。少し待ってからもう一度押してください。", true);
-      return;
-    }
+    if (app.warnIfNoItems()) return;
     this.openPicker(this.myId !== null);
   },
 
@@ -132,11 +129,10 @@ const MeScreen = {
 
   renderPicker() {
     const list = document.getElementById("mePickerList");
-    const query = document.getElementById("mePickerSearch").value.trim().toLocaleLowerCase();
+    const query = document.getElementById("mePickerSearch").value;
     const { SORT_NO } = CONFIG.FIELDS;
     const rows = app.items
-      .filter(item => !query || [item[SORT_NO], item.Title, item.Dept]
-        .some(v => String(v ?? "").toLocaleLowerCase().includes(query)))
+      .filter(item => TextUtil.matches([item[SORT_NO], item.Title, item.Dept], query))
       .sort((a, b) => app.compareItemsBy(a, b, "SortNo", "asc"));
 
     list.replaceChildren();

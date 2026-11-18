@@ -366,9 +366,9 @@ const StatsScreen = {
     document.getElementById("statsGroupModal").classList.add("active");
   },
 
-  closeGroupModal() {
+  closeGroupModal(force = false) {
     if (!this.isGroupModalOpen()) return;
-    if (this.dirty && !confirm("保存されていない変更があります。閉じてもよろしいですか？")) {
+    if (!force && this.dirty && !confirm("保存されていない変更があります。閉じてもよろしいですか？")) {
       return;
     }
     this.dirty = false;
@@ -552,14 +552,10 @@ const StatsScreen = {
   },
 
   getFilteredItemsForModal() {
-    const query = (document.getElementById("statsGroupMemberSearch")?.value || "").trim().toLocaleLowerCase();
+    const query = document.getElementById("statsGroupMemberSearch")?.value || "";
     const sortNoField = CONFIG.FIELDS.SORT_NO;
     return app.items
-      .filter(item => {
-        if (!query) return true;
-        return [item[sortNoField], item.Title, item.Dept, item.Seat]
-          .some(v => String(v ?? "").toLocaleLowerCase().includes(query));
-      })
+      .filter(item => TextUtil.matches([item[sortNoField], item.Title, item.Dept, item.Seat], query))
       .sort((a, b) => app.compareItemsBy(a, b, "SortNo", "asc"));
   },
 

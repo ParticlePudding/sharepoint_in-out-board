@@ -74,6 +74,13 @@ const ListScreen = {
         if (this.isColAdjustMode || e.target.closest(".col-resizer")) return;
         this.setSort(th.dataset.sort);
       });
+      // キーボードでも並び替えできるように（Tab で止まり、Enter／Space で並び替え）
+      th.tabIndex = 0;
+      th.addEventListener("keydown", e => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        if (!this.isColAdjustMode) this.setSort(th.dataset.sort);
+      });
     });
     document.querySelectorAll("#employeeTable .th-sort-btn").forEach(btn => {
       btn.addEventListener("click", e => {
@@ -310,18 +317,17 @@ const ListScreen = {
   /* ===== 描画 ===== */
   getFilteredRows() {
     const { NOTE, SORT_NO, SCHEDULE } = CONFIG.FIELDS;
-    const query = (document.getElementById("employeeSearch")?.value || "").trim().toLocaleLowerCase();
+    const query = document.getElementById("employeeSearch")?.value || "";
 
     return app.items
       .filter(item => {
         if (!StatusFilterUtil.matches(this.statusFilter, item.Status)) return false;
         if (!MapScreen.getItemFloorKeys(item).some(k => this.floors.has(k))) return false;
-        if (!query) return true;
+        if (!query.trim()) return true;
         const sched = app.parseSchedule(item[SCHEDULE]);
         const schedStr = sched ? `${sched.date} ${DateUtils.formatSchedule(sched)} ${sched.status || "未入力"} ${sched.note}` : "";
-        const statusStr = item.Status || "未入力";
-        return [item[SORT_NO], item.Title, item.Dept, item.Seat, statusStr, item[NOTE], schedStr]
-          .some(value => String(value ?? "").toLocaleLowerCase().includes(query));
+        const statusStr = StatusFilterUtil.normalizeStatus(item.Status) || "未入力";
+        return TextUtil.matches([item[SORT_NO], item.Title, item.Dept, item.Seat, statusStr, item[NOTE], schedStr], query);
       })
       .sort((a, b) => app.compareItemsBy(a, b, this.sortKey, this.sortOrder));
   },
@@ -382,7 +388,7 @@ const ListScreen = {
       nameTd.append(nameDiv, deptDiv);
 
       const statusTd = document.createElement("td");
-      const status = item.Status ?? "";
+      const status = StatusFilterUtil.normalizeStatus(item.Status); // 想定外の値は「未入力」（座席表・人数表と同じ）
       const pill = document.createElement("span");
       pill.className = `status-pill ${getStatusView(status).pill}`;
       pill.textContent = status || "未入力";

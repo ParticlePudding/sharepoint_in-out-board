@@ -26,10 +26,7 @@ const SeatAssign = {
 
   open(seatNo) {
     if (!this.isEnabled()) return;
-    if (!app.items.length) {
-      app.toast("社員データを読み込み中です。少し待ってからもう一度押してください。", true);
-      return;
-    }
+    if (app.warnIfNoItems()) return;
     this.seatNo = seatNo;
     document.getElementById("seatAssignTitleText").textContent = `${seatNo} に席を割り当て`;
     const search = document.getElementById("seatAssignSearch");
@@ -50,11 +47,10 @@ const SeatAssign = {
 
   render() {
     const list = document.getElementById("seatAssignList");
-    const query = document.getElementById("seatAssignSearch").value.trim().toLocaleLowerCase();
+    const query = document.getElementById("seatAssignSearch").value;
     const { SORT_NO } = CONFIG.FIELDS;
     const rows = app.items
-      .filter(item => !query || [item[SORT_NO], item.Title, item.Dept, item.Seat]
-        .some(v => String(v ?? "").toLocaleLowerCase().includes(query)))
+      .filter(item => TextUtil.matches([item[SORT_NO], item.Title, item.Dept, item.Seat], query))
       .sort((a, b) => {
         // 「自分」を一番上に出す（フリーアドレスで自分の席を選ぶ時に探さなくてよいように）
         const am = MeScreen.isMe(a.Id), bm = MeScreen.isMe(b.Id);
@@ -96,8 +92,9 @@ const SeatAssign = {
       who.append(name, sub);
 
       const pill = document.createElement("span");
-      pill.className = `status-pill ${getStatusView(item.Status).pill}`;
-      pill.textContent = item.Status || "未入力";
+      const status = StatusFilterUtil.normalizeStatus(item.Status);
+      pill.className = `status-pill ${getStatusView(status).pill}`;
+      pill.textContent = status || "未入力";
 
       btn.append(who, pill);
       btn.addEventListener("click", () => this.assign(item));
@@ -140,6 +137,32 @@ const SeatAssign = {
     } else if (current.includes(seatNo)) {
       seats = current;                         // すでにこの席を持っている（変更なし）
     }
+
+    // 送る直前に、サーバーの最新の席を確かめる（別の端末が同じ空席に割り当てたばかりの場合に、二重に座らせない）
+    let latest;
+    try {
+      latest = await spApi.getSeatsOnly();
+    } catch (err) {
+      console.error("席の確認エラー:", err);
+      app.toast("最新の席の状況を確認できませんでした。通信状況を確認して、もう一度お試しください。", true);
+      return;
+    }
+    if (this.seatNo !== seatNo) return;        // 確認している間に割り当て画面が閉じられた
+    const latestById = new Map(latest.map(r => [Number(r.Id), r]));
+    app.items.forEach(i => {
+      const r = latestById.get(Number(i.Id));
+      if (r) i.Seat = r.Seat;
+    });
+    SaveQueue.overlay(app.items);              // まだ送っていない自分の席の変更は残す
+    const taken = this.occupantOf(seatNo);
+    if (taken && Number(taken.Id) !== id) {
+      alert(`${seatNo} には、たった今 ${taken.Title || "名前未設定"}さんが割り当てられました。別の席を選んでください。`);
+      this.close();
+      app.renderCurrentView();
+      return;
+    }
+    const latestMine = app.parseSeats((app.items.find(i => Number(i.Id) === id) || item).Seat);
+    if (mode === "add") seats = [...new Set([...latestMine, seatNo])];
 
     // 画面にはすぐ反映し、送信は SaveQueue が裏で行う。
     // 直後に開くステータス画面の「まとめ送信」を待たずにすぐ送る（他の人が同じ席を選ばないように）

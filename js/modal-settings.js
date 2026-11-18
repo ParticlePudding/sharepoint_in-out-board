@@ -32,9 +32,10 @@ const SettingsModal = {
     document.getElementById("settingsModal").classList.add("active");
   },
 
-  close() {
+  // force: 確認を出さずに閉じる（サイネージで放置された時。確認ダイアログが出たままだと画面全体が止まるため）
+  close(force = false) {
     if (!this.isOpen()) return;
-    if (this.drafts.size && !confirm("保存していない変更があります。閉じてもよろしいですか？")) return;
+    if (!force && this.drafts.size && !confirm("保存していない変更があります。閉じてもよろしいですか？")) return;
     this.drafts.clear();
     document.getElementById("settingsModal").classList.remove("active");
   },
@@ -76,15 +77,14 @@ const SettingsModal = {
     if (!tbody) return;
     this.updateSortHeaders();
     const sortNoField = CONFIG.FIELDS.SORT_NO;
-    const query = (document.getElementById("settingsSearch")?.value || "").trim().toLocaleLowerCase();
+    const query = document.getElementById("settingsSearch")?.value || "";
 
     // 削除済みメンバーの下書きは捨てる
     const liveIds = new Set(app.items.map(i => Number(i.Id)));
     [...this.drafts.keys()].forEach(id => { if (!liveIds.has(id)) this.drafts.delete(id); });
 
     const rows = app.items
-      .filter(item => [item[sortNoField], item.Seat, item.Title, item.Dept]
-        .some(val => String(val ?? "").toLocaleLowerCase().includes(query)))
+      .filter(item => TextUtil.matches([item[sortNoField], item.Seat, item.Title, item.Dept], query))
       .sort((a, b) => app.compareItemsBy(a, b, this.sortKey, this.sortOrder));
 
     // 全何名 ／ 座席未割当・配置未登録あり ／ 検索結果 の表示更新

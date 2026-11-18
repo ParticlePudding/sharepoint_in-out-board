@@ -107,7 +107,9 @@ const StatusModal = {
     this.renderSchedule(item);
 
     document.querySelectorAll(".status-select-btn").forEach(btn => {
-      btn.classList.toggle("current", btn.dataset.status === current);
+      const isCurrent = btn.dataset.status === current;
+      btn.classList.toggle("current", isCurrent);
+      btn.setAttribute("aria-pressed", String(isCurrent)); // 今の状態を読み上げでも伝える
       btn.disabled = false;
     });
     document.getElementById("statusModal").classList.add("active");
@@ -151,8 +153,11 @@ const StatusModal = {
   },
 
   updateNoteCount() {
-    const len = [...document.getElementById("noteInput").value].length;
-    document.getElementById("noteCount").textContent = `${len}/${CONFIG.NOTE_MAX}`;
+    const len = [...document.getElementById("noteInput").value.trim()].length;
+    const countEl = document.getElementById("noteCount");
+    const over = len > CONFIG.NOTE_MAX;
+    countEl.textContent = over ? `${len}/${CONFIG.NOTE_MAX}（${len - CONFIG.NOTE_MAX}文字多い）` : `${len}/${CONFIG.NOTE_MAX}`;
+    countEl.classList.toggle("over", over);
     this.syncNoteUi();
   },
 
@@ -171,8 +176,11 @@ const StatusModal = {
     document.getElementById("noteClearBtn").disabled = input.value.trim() === "" && this.savedNote === "";
   },
 
-  readNote() {
+  // allowUnchangedLong: 保存済みの備考から変えていなければ、長さを確かめない
+  // （SharePoint で直接入れた長い備考があっても、ステータスだけは変えられるように）
+  readNote({ allowUnchangedLong = false } = {}) {
     const value = document.getElementById("noteInput").value.trim();
+    if (allowUnchangedLong && value === this.savedNote) return value;
     if ([...value].length > CONFIG.NOTE_MAX) {
       document.getElementById("modalError").textContent = `備考は${CONFIG.NOTE_MAX}文字以内で入力してください。`;
       return null;
@@ -183,7 +191,7 @@ const StatusModal = {
   saveIndividualStatus(newStatus) {
     if (!isValidStatus(newStatus)) return;
     const fields = { Status: newStatus };
-    const note = this.readNote();
+    const note = this.readNote({ allowUnchangedLong: true });
     if (note === null) return;
     const noteField = CONFIG.FIELDS.NOTE;
     const item = app.items.find(i => Number(i.Id) === this.currentEditingId);
@@ -386,7 +394,7 @@ const StatusModal = {
       box.classList.remove("active");
       textEl.textContent = "";
       setAt(DateUtils.getTomorrowYmd(), "00:00");
-      statusSelect.value = STATUS.VACATION;
+      statusSelect.value = SCHED_STATUS_UNSET; // 状態は自分で選ぶ（日付だけ変えて意図しない予約が入らないように）
       noteInput.value = "";
     }
     this.syncSchedStatusUi();
@@ -430,7 +438,7 @@ const StatusModal = {
   // 予約欄の入力を確認して保存用の値を作る。不備があれば { error }
   readScheduleForm() {
     const { date, time, status, note } = this.currentScheduleValues();
-    if (!isValidStatus(status)) return { error: "予約するステータスを選択してください。" };
+    if (!isValidStatus(status)) return { error: "予約するステータスを選択してください（予約しない場合は、予約日・時刻を元に戻してください）。" };
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { error: "予約日を入力してください。" };
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return { error: "予約時刻を入力してください。" };
     if (`${date}T${time}` <= DateUtils.getNowYmdHm()) return { error: "予約日時は今より後の日時を指定してください。" };
@@ -546,7 +554,11 @@ const StatusModal = {
     const btn = document.getElementById("schedStatusBtn");
     const select = document.getElementById("schedStatusSelect");
     if (!btn || !select) return;
-    Icons.setStatusLabel(btn, select.value, getStatusView(select.value).menuLabel);
+    if (isValidStatus(select.value)) {
+      Icons.setStatusLabel(btn, select.value, getStatusView(select.value).menuLabel);
+    } else {
+      btn.textContent = "状態を選択";
+    }
     this.syncScheduleUi();
   },
 
@@ -562,6 +574,7 @@ const StatusModal = {
 
   clearSchedule() {
     if (this.currentEditingId === null) return;
+    if (!confirm("予約を取り消しますか？")) return;
     this.submit({ [CONFIG.FIELDS.SCHEDULE]: "" }, { close: false, message: "予約を取り消しました" });
   },
 

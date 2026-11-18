@@ -81,7 +81,7 @@
             <input type="checkbox" id="bulkNoteCheck">
             <span>備考も変更する:</span>
           </label>
-          <input type="text" id="bulkNoteInput" class="bulk-note-input" maxlength="16" placeholder="備考を入力 (空欄でクリア)" disabled>
+          <input type="text" id="bulkNoteInput" class="bulk-note-input" placeholder="備考を入力 (空欄でクリア)" disabled>
         </div>
         <div class="bulk-exec-group">
           <button type="button" class="btn-primary" id="bulkExecuteBtn">実行</button>
@@ -94,7 +94,12 @@
     <div class="map-stage" id="mapStage">
       <div class="map-viewport" id="viewport">
         <div id="floorMap" class="floor-map-container"></div>
-        <button type="button" id="zoomFit" class="fit-btn" hidden>全体に戻す</button>
+        <!-- 拡大・縮小（ホイール・ピンチ・＋／－キーでも操作できる） -->
+        <div class="zoom-controls" id="zoomControls" role="group" aria-label="座席表の拡大・縮小">
+          <button type="button" id="zoomFit" class="fit-btn" hidden>全体に戻す</button>
+          <button type="button" id="zoomOut" class="zoom-btn" aria-label="縮小" title="縮小（－キー）">－</button>
+          <button type="button" id="zoomIn" class="zoom-btn" aria-label="拡大" title="拡大（＋キー）">＋</button>
+        </div>
       </div>
 
       <!-- サイネージ・併用向け サイドリストパネル -->
@@ -380,7 +385,7 @@
         </div>
         <div class="settings-form-grid">
           <input type="number" id="newSortNo" placeholder="No." step="1">
-          <input type="text" id="newSeat" placeholder="席番号 (例: A-1)">
+          <input type="text" id="newSeat" placeholder="席番号 (例: 1F-A01)">
           <input type="text" id="newName" placeholder="名前">
           <input type="text" id="newDept" placeholder="部署">
           <button type="button" class="btn-primary" id="addMemberBtn">登録</button>
@@ -444,7 +449,7 @@
           </span>
         </div>
         <div class="note-row">
-          <input type="text" id="noteInput" maxlength="16" autocomplete="off" enterkeyhint="done" aria-describedby="noteDraftHint">
+          <input type="text" id="noteInput" autocomplete="off" enterkeyhint="done" aria-describedby="noteDraftHint">
           <button type="button" class="btn-outline-danger" id="noteClearBtn" title="備考を消して保存します（画面は閉じません）">削除</button>
           <button type="button" class="btn-success" id="noteSaveBtn" title="備考だけを保存します（画面は閉じません）">備考を保存</button>
         </div>
@@ -490,7 +495,7 @@
           </div>
         </div>
         <div class="schedule-bottom-row">
-          <input type="text" id="schedNoteInput" maxlength="16" placeholder="予約時の備考" autocomplete="off" enterkeyhint="done">
+          <input type="text" id="schedNoteInput" placeholder="予約時の備考" autocomplete="off" enterkeyhint="done">
           <button type="button" class="btn-primary" id="saveScheduleBtn">予約を保存</button>
         </div>
       </div>

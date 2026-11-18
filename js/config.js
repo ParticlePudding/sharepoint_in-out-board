@@ -37,6 +37,9 @@ const STATUS = Object.freeze({
   NONE: ""
 });
 
+// 予定予約のステータス欄の「まだ選んでいない」状態（STATUS のどれとも重ならない値）
+const SCHED_STATUS_UNSET = "__unset__";
+
 const CONFIG = {
   SITE_URL: resolveSiteUrl(),
   LIST_NAME: "社員名簿",
@@ -56,13 +59,16 @@ const CONFIG = {
   SIGNAGE_FULL_REFRESH_MS: 15 * 60 * 1000, // サイネージ用全件更新＋予約反映: 15分
   DATE_CHANGE_REFRESH_JITTER_MS: 30 * 1000,// 日付が変わった際、一般クライアントの全件更新をばらつかせる幅
   SCHEDULE_PROCESS_JITTER_MS: 20 * 1000,   // サイネージ間の予約反映の衝突を避けるための待ち時間の幅
+  SIGNAGE_IDLE_RESET_MS: 60 * 1000,        // サイネージで操作がこの時間ないと、開いている画面を閉じて元の表示に戻す
   STATS_GROUPS_CACHE_MS: 60 * 1000,        // 人数表グループ設定の再取得間隔
 
   HTTP_TIMEOUT_MS: 15 * 1000,              // 通信タイムアウト
   HTTP_MAX_RETRY: 2,                       // 429/503 の再試行回数
   WRITE_CONCURRENCY: 5,                    // 一括更新・予約反映・保存キューの同時リクエスト数
   SAVE_HOLD_MAX_MS: 20 * 1000,             // ステータス画面を開いている間、変更をまとめて待つ最大時間
-  SAVE_RETRY_MAX: 2,                       // 保存に失敗した時の自動再送回数（2秒後・4秒後）
+  SAVE_RETRY_MAX: 2,                       // 保存に失敗した時、通知するまでの自動再送回数（2秒後・4秒後）
+                                           // 通信できない失敗はその後も送り直し続ける（最大 SAVE_RETRY_INTERVAL_MAX_MS 間隔。通信が戻ればすぐ）
+  SAVE_RETRY_INTERVAL_MAX_MS: 30 * 1000,
 
   // SharePointリストの内部列名
   // ※ QuickNotes / NextSchedule は「複数行テキスト（プレーンテキスト）」列にしてください（255文字制限回避）

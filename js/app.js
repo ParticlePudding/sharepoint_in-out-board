@@ -70,6 +70,42 @@ const DateUtils = {
   }
 };
 
+/* ===================== 検索用の文字の正規化 =====================
+ * 表記ゆれがあっても見つかるように、検索する側とされる側を同じ形にそろえて比べる。
+ *  - 全角/半角（NFKC）、大文字/小文字
+ *  - カタカナ → ひらがな（「ｻﾄｳ」「サトウ」「さとう」を同じに）
+ *  - 欧文のアクセント記号（Müller → muller、Nguyễn → nguyen）。日本語の濁点は残す
+ *  - 空白（全角・半角・有無の違い）は無視
+ *  - よく使われる異体字（齋/齊→斎、邊/邉→辺、髙→高、﨑→崎）
+ */
+const TextUtil = {
+  _variants: { "齋": "斎", "齊": "斎", "邊": "辺", "邉": "辺", "髙": "高", "﨑": "崎" },
+  _cache: new Map(),
+
+  normalize(value) {
+    const raw = String(value ?? "");
+    if (!raw) return "";
+    const hit = this._cache.get(raw);
+    if (hit !== undefined) return hit;
+    const out = raw.normalize("NFKC")
+      .toLocaleLowerCase()
+      .normalize("NFD").replace(/[̀-ͯ]/g, "").normalize("NFC")
+      .replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60))
+      .replace(/[齋齊邊邉髙﨑]/g, ch => this._variants[ch])
+      .replace(/\s+/g, "");
+    if (this._cache.size > 5000) this._cache.clear();
+    this._cache.set(raw, out);
+    return out;
+  },
+
+  // values のどれかに query が含まれるか（query は normalize 前の入力そのままでよい）
+  matches(values, query) {
+    const q = this.normalize(query);
+    if (!q) return true;
+    return values.some(v => this.normalize(v).includes(q));
+  }
+};
+
 /* ===================== ソート共通ユーティリティ ===================== */
 const SortUtil = {
   next(state, key) {
@@ -247,14 +283,17 @@ const MemberCardView = {
       grid.className = "side-card-grid";
 
       groupItems.forEach(item => {
-        const status = item.Status ?? "";
+        const status = StatusFilterUtil.normalizeStatus(item.Status);
         const viewInfo = getStatusView(status);
         const card = document.createElement("div");
         card.className = `side-mini-card ${viewInfo.cls}`;
+        if (MapScreen.isBulkMode && MapScreen.selectedIds.has(Number(item.Id))) card.classList.add("selected");
         card.tabIndex = 0;
         card.setAttribute("role", "button");
+        card.dataset.id = item.Id;
         card.title = `${item.Title || "名前未設定"}${item.Dept ? ` [${item.Dept}]` : ""} (${status || "未入力"}) ${item[NOTE] || ""}`.trim();
-        const openModal = () => StatusModal.open(Number(item.Id), item.Title || "名前未設定");
+        // 一括変更中は選択、それ以外はステータス画面（座席表のカードと同じ動き）
+        const openModal = () => MapScreen.openOrSelect(item);
         card.addEventListener("click", openModal);
         card.addEventListener("keydown", e => {
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openModal(); }
@@ -301,6 +340,8 @@ const app = {
   _processingSchedules: false,
   lastOkAt: 0,
   lastFullDate: "",
+  loaded: false,          // 1回でも全件取得に成功したか（0件と読み込み中を区別する）
+  signageHomeFloor: null, // サイネージで、操作が途切れたら戻すフロア
 
   // パース結果キャッシュ（ソート・描画で同じ文字列を何度もパースしない）
   _schedCache: new Map(),
@@ -462,10 +503,70 @@ const app = {
 
     this.initModalA11y();
     this.initOverflowTooltips();
+    this.initSignageIdleReset();
+    // 印刷した紙に、いつ時点の情報かを残す（styles.css の @media print で見出しの後ろに出す）
+    window.addEventListener("beforeprint", () => {
+      const last = this.lastOkAt ? new Date(this.lastOkAt).toLocaleString("ja-JP") : "未取得";
+      document.getElementById("viewTitle").dataset.printedAt =
+        `印刷 ${new Date().toLocaleString("ja-JP")} ／ データ取得 ${last}`;
+    });
 
     await this.refreshAll();
     this.handleUrlParams();
     this.startAutoRefresh();
+  },
+
+  /* ===== 「読み込み中」と「0件」を区別した案内 ===== */
+  // 社員データがまだ使えない時は案内を出して true を返す（呼び出し側はそこで中止する）
+  warnIfNoItems() {
+    if (this.items.length) return false;
+    this.toast(this.loaded
+      ? "社員が登録されていません。「設定」から登録してください。"
+      : "社員データを読み込み中です。少し待ってからもう一度押してください。", true);
+    return true;
+  },
+
+  /* ===== サイネージ: 操作が途切れたら開いている画面を閉じて元の表示に戻す =====
+   * ステータス画面・設定・一括変更などを開いている間は自動更新と予約反映を止めるため、
+   * 共用の表示PCで誰かが触ったまま離れると、更新が止まったままになる。それを防ぐ。 */
+  _lastInteractionAt: Date.now(),
+
+  initSignageIdleReset() {
+    if (!this.isSignageMode) return;
+    const touch = () => { this._lastInteractionAt = Date.now(); };
+    ["pointerdown", "keydown", "wheel", "input"].forEach(type =>
+      document.addEventListener(type, touch, { capture: true, passive: true }));
+    setInterval(() => {
+      if (Date.now() - this._lastInteractionAt < CONFIG.SIGNAGE_IDLE_RESET_MS) return;
+      this.resetSignageView();
+    }, 10000);
+  },
+
+  isAnyOverlayOpen() {
+    return this.isChoiceOpen() || ClockPicker.isOpen() || CalendarPicker.isOpen() ||
+      MeScreen.isPickerOpen() || SeatAssign.isOpen() || StatsScreen.isMembersPopupOpen() ||
+      StatsScreen.isGroupModalOpen() || SettingsModal.isOpen() || StatusModal.isOpen() || MapScreen.isBulkMode;
+  },
+
+  resetSignageView() {
+    const home = this.signageHomeFloor || CONFIG.FLOORS[0].id;
+    const needsReset = this.isAnyOverlayOpen() || this.currentView !== "map" ||
+      MapScreen.currentFloorId !== home || !MapScreen.autoFit;
+    if (!needsReset) return;
+    if (this.isChoiceOpen()) this.finishChoice(null);
+    ClockPicker.close();
+    CalendarPicker.close();
+    if (MeScreen.isPickerOpen()) MeScreen.closePicker();
+    if (SeatAssign.isOpen()) SeatAssign.close();
+    if (StatsScreen.isMembersPopupOpen()) StatsScreen.closeMembersPopup();
+    if (StatsScreen.isGroupModalOpen()) StatsScreen.closeGroupModal(true);
+    if (SettingsModal.isOpen()) SettingsModal.close(true);
+    if (StatusModal.isOpen()) StatusModal.close(); // 書きかけは捨てる（確定済みの変更は送信される）
+    if (MapScreen.isBulkMode) MapScreen.toggleBulkMode(false);
+    MapScreen.setFloor(home);
+    this.switchView("map");
+    MapScreen.fit();
+    this.refreshAll();
   },
 
   /* ===== ステータスのボタン・選択肢を CONFIG.STATUS_VIEW から生成（HTMLとの二重管理を排除） ===== */
@@ -503,7 +604,12 @@ const app = {
     const schedSelect = document.getElementById("schedStatusSelect");
     if (schedSelect) {
       schedSelect.replaceChildren();
-      // 並びはステータスボタンと同じ（出勤→…→未入力）。初期選択は「休暇」（StatusModal.renderSchedule）
+      // 並びはステータスボタンと同じ（出勤→…→未入力）。
+      // 予約がない時の初期値は「未選択」（日付だけ変えて意図しない予約が入らないように。StatusModal.renderSchedule）
+      const unset = document.createElement("option");
+      unset.value = SCHED_STATUS_UNSET;
+      unset.textContent = "状態を選択";
+      schedSelect.appendChild(unset);
       statuses.forEach(st => {
         const opt = document.createElement("option");
         opt.value = st;
@@ -581,17 +687,26 @@ const app = {
       dialog.setAttribute("tabindex", "-1");
       let wasActive = false;
       let opener = null;
+      let openerKey = null; // 開いた元が再描画で作り直されても、同じ席・同じ人の要素へ戻すための目印
 
       new MutationObserver(() => {
         const active = overlay.classList.contains("active");
         if (active && !wasActive) {
           opener = document.activeElement;
+          openerKey = opener && opener.dataset ? { seat: opener.dataset.seat, id: opener.dataset.id } : null;
           dialog.focus({ preventScroll: true }); // 入力欄に直接フォーカスしない（タッチ端末のキーボード誤表示防止）
         } else if (!active && wasActive) {
-          if (opener && opener !== document.body && document.contains(opener) && typeof opener.focus === "function") {
-            opener.focus({ preventScroll: true });
+          let target = opener;
+          if (target && !document.contains(target) && openerKey) {
+            // 保存後の再描画で元の要素が消えた時は、同じ席（なければ同じ人）の要素に戻す
+            target = (openerKey.seat && document.querySelector(`.seat-card[data-seat="${CSS.escape(openerKey.seat)}"]`)) ||
+                     (openerKey.id && document.querySelector(`[data-id="${CSS.escape(openerKey.id)}"][tabindex]`)) || null;
+          }
+          if (target && target !== document.body && document.contains(target) && typeof target.focus === "function") {
+            target.focus({ preventScroll: true });
           }
           opener = null;
+          openerKey = null;
         }
         wasActive = active;
       }).observe(overlay, { attributes: true, attributeFilter: ["class"] });
@@ -774,6 +889,7 @@ const app = {
     if (floorParam && CONFIG.FLOORS.some(f => f.id === floorParam)) {
       MapScreen.switchFloor(floorParam);
     }
+    if (this.isSignageMode) this.signageHomeFloor = MapScreen.currentFloorId;
 
     const idParam = params.get("id");
     const userParam = params.get("user") || params.get("name");
@@ -791,9 +907,13 @@ const app = {
         if (target) targetSeatNo = qSeat;
       }
     } else if (userParam) {
-      const q = userParam.trim().toLowerCase();
-      target = this.items.find(i => String(i.Title || "").toLowerCase() === q) ||
-               this.items.find(i => String(i.Title || "").toLowerCase().includes(q));
+      const q = TextUtil.normalize(userParam);
+      target = this.items.find(i => TextUtil.normalize(i.Title) === q) ||
+               this.items.find(i => q && TextUtil.normalize(i.Title).includes(q));
+    }
+
+    if (idParam && !target && this.loaded) {
+      this.toast(`直行URLの社員（Id ${idParam}）が見つかりません。削除されたか、URLが古い可能性があります。`, true);
     }
 
     if (target) {
@@ -855,6 +975,9 @@ const app = {
     this._processingSchedules = true;
     let applied = false;
     let needReload = false;
+    // 「当日の予約か」は期限を見つけた時点の日付でも判定する
+    // （23:59 の予約を見つけてから待っている間に 0時を過ぎても、前日分として捨てないように）
+    const detectedDay = DateUtils.getTodayYmd();
     try {
       await AsyncUtil.sleep(Math.random() * CONFIG.SCHEDULE_PROCESS_JITTER_MS);
 
@@ -867,7 +990,7 @@ const app = {
         if (!isDue(sched)) return "stale";
 
         // 当日の予約は反映。前日以前の予約（サイネージが止まっていた日など）は反映せず消すだけ
-        if (sched.date === DateUtils.getTodayYmd()) {
+        if (sched.date === DateUtils.getTodayYmd() || sched.date === detectedDay) {
           await spApi.update(item.Id, { Status: sched.status, [NOTE]: sched.note, [SCHEDULE]: "" });
           item.Status = sched.status;
           item[NOTE] = sched.note;
@@ -1025,6 +1148,7 @@ const app = {
         this.items = await spApi.getAllFull();
         SaveQueue.overlay(this.items); // まだサーバーに届いていない自分の変更で上書き（表示が一瞬戻らないように）
         this.lastFullDate = today;
+        this.loaded = true;
         this.renderCurrentView();
         if (SettingsModal.isOpen()) SettingsModal.render();
         MeScreen.syncNavButton(); // 名前の変更・削除を「自分」ボタンに反映
@@ -1035,6 +1159,10 @@ const app = {
         const { NOTE, SCHEDULE } = CONFIG.FIELDS;
         const partialList = await spApi.getFrequentOnly();
         const partialMap = new Map(partialList.map(p => [Number(p.Id), p]));
+        // 管理者が社員を追加・削除していたら、全件を取り直す（軽量更新は既存の人の上書きしかできないため）
+        if (partialMap.size !== this.items.length || this.items.some(i => !partialMap.has(Number(i.Id)))) {
+          this._queued = "all";
+        }
         this.items.forEach(item => {
           const updated = partialMap.get(Number(item.Id));
           if (updated) {
