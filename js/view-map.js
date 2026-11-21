@@ -62,8 +62,7 @@ const MapScreen = {
     const savedSearch = app.loadCache(keys.sideListSearch);
     const savedSideFloors = app.loadCache(keys.sideListFloors, true);
 
-    // サイネージは端末に残ったフロアを使わない（誰かが切り替えたまま戻らなくならないように。URL の floor= か先頭のフロア）
-    if (!app.isSignageMode && savedFloor && CONFIG.FLOORS.some(f => f.id === savedFloor)) {
+    if (savedFloor && CONFIG.FLOORS.some(f => f.id === savedFloor)) {
       this.currentFloorId = savedFloor;
     }
     if (isValidStatus(savedBulkStatus)) {
@@ -782,7 +781,7 @@ const MapScreen = {
     const floor = CONFIG.FLOORS.find(f => f.id === floorId);
     if (!floor) return false;
     this.currentFloorId = floorId;
-    if (!app.isSignageMode) app.saveCache(CONFIG.CACHE_KEYS.floor, floorId);
+    app.saveCache(CONFIG.CACHE_KEYS.floor, floorId);
     this.renderFloorButtons();
     return true;
   },

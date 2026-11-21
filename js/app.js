@@ -341,7 +341,6 @@ const app = {
   lastOkAt: 0,
   lastFullDate: "",
   loaded: false,          // 1回でも全件取得に成功したか（0件と読み込み中を区別する）
-  signageHomeFloor: null, // サイネージで、操作が途切れたら戻すフロア
 
   // パース結果キャッシュ（ソート・描画で同じ文字列を何度もパースしない）
   _schedCache: new Map(),
@@ -526,9 +525,10 @@ const app = {
     return true;
   },
 
-  /* ===== サイネージ: 操作が途切れたら開いている画面を閉じて元の表示に戻す =====
+  /* ===== サイネージ: 画面を開いたまま放置されたら閉じて座席表に戻す =====
    * ステータス画面・設定・一括変更などを開いている間は自動更新と予約反映を止めるため、
-   * 共用の表示PCで誰かが触ったまま離れると、更新が止まったままになる。それを防ぐ。 */
+   * 共用の表示PCで誰かが開いたまま離れると、更新が止まったままになる。それを防ぐ。
+   * 何も開いていなければ（リスト・人数表を見ているだけなら）何もしない。フロアと拡大率もそのまま。 */
   _lastInteractionAt: Date.now(),
 
   initSignageIdleReset() {
@@ -549,10 +549,7 @@ const app = {
   },
 
   resetSignageView() {
-    const home = this.signageHomeFloor || CONFIG.FLOORS[0].id;
-    const needsReset = this.isAnyOverlayOpen() || this.currentView !== "map" ||
-      MapScreen.currentFloorId !== home || !MapScreen.autoFit;
-    if (!needsReset) return;
+    if (!this.isAnyOverlayOpen()) return;
     if (this.isChoiceOpen()) this.finishChoice(null);
     ClockPicker.close();
     CalendarPicker.close();
@@ -563,9 +560,7 @@ const app = {
     if (SettingsModal.isOpen()) SettingsModal.close(true);
     if (StatusModal.isOpen()) StatusModal.close(); // 書きかけは捨てる（確定済みの変更は送信される）
     if (MapScreen.isBulkMode) MapScreen.toggleBulkMode(false);
-    MapScreen.setFloor(home);
-    this.switchView("map");
-    MapScreen.fit();
+    if (this.currentView !== "map") this.switchView("map"); // フロアは最後に表示していたもののまま
     this.refreshAll();
   },
 
@@ -889,7 +884,6 @@ const app = {
     if (floorParam && CONFIG.FLOORS.some(f => f.id === floorParam)) {
       MapScreen.switchFloor(floorParam);
     }
-    if (this.isSignageMode) this.signageHomeFloor = MapScreen.currentFloorId;
 
     const idParam = params.get("id");
     const userParam = params.get("user") || params.get("name");
