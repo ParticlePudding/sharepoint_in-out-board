@@ -532,7 +532,7 @@ const app = {
   _lastInteractionAt: Date.now(),
 
   initSignageIdleReset() {
-    if (!this.isSignageMode) return;
+    if (!this.isSignageMode || !(CONFIG.SIGNAGE_IDLE_RESET_MS > 0)) return; // 0 なら無効
     const touch = () => { this._lastInteractionAt = Date.now(); };
     ["pointerdown", "keydown", "wheel", "input"].forEach(type =>
       document.addEventListener(type, touch, { capture: true, passive: true }));

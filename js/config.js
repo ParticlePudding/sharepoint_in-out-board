@@ -59,7 +59,7 @@ const CONFIG = {
   SIGNAGE_FULL_REFRESH_MS: 15 * 60 * 1000, // サイネージ用全件更新＋予約反映: 15分
   DATE_CHANGE_REFRESH_JITTER_MS: 30 * 1000,// 日付が変わった際、一般クライアントの全件更新をばらつかせる幅
   SCHEDULE_PROCESS_JITTER_MS: 20 * 1000,   // サイネージ間の予約反映の衝突を避けるための待ち時間の幅
-  SIGNAGE_IDLE_RESET_MS: 60 * 1000,        // サイネージで操作がこの時間ないと、開いている画面を閉じて元の表示に戻す
+  SIGNAGE_IDLE_RESET_MS: 0,                // サイネージで操作がこの時間（ミリ秒）ないと、開いている画面を閉じて元の表示に戻す。0 で無効（既定: 無効＝利用者の操作に任せる）
   STATS_GROUPS_CACHE_MS: 60 * 1000,        // 人数表グループ設定の再取得間隔
 
   HTTP_TIMEOUT_MS: 15 * 1000,              // 通信タイムアウト
