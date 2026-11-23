@@ -3,7 +3,7 @@
 ■ Lucide Icons v1.70.0（icons.js に埋め込み）
   https://lucide.dev/
   使用アイコン: map, list, chart-column, user-round, settings, refresh-cw, search, x,
-               calendar, map-pin, link, users, layout-grid, list-checks,
+               calendar, clock, map-pin, link, users, layout-grid, list-checks,
                move-horizontal, save, triangle-alert, check, panel-right, log-out
 
   以下、Lucide の配布物に含まれるライセンス文（原文）です。
